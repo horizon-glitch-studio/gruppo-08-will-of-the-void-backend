@@ -207,10 +207,17 @@ Table starter_deck_card {
 }
 
 Table pack_type {
-  id          int          [pk, increment]
-  name        varchar(100) [not null]
-  credit_cost int          [not null, check: `credit_cost > 0`]
-  is_active   boolean      [not null, default: true]
+  id              int          [pk, increment]
+  name            varchar(100) [not null]
+  credit_cost     int          [not null, check: `credit_cost > 0`]
+  is_active       boolean      [not null, default: true]
+  available_from  timestamptz  [note: 'event packs: start of the event; null = always available']
+  available_until timestamptz  [note: 'event packs: end of the event; null = no end']
+
+  checks {
+    `available_from IS NULL OR available_until IS NULL OR available_until > available_from` [name: 'chk_pack_availability_window']
+  }
+  Note: 'Wanderers drop only from event packs, which can be bought between available_from and available_until'
 }
 
 Table pack_slot {
