@@ -2,7 +2,7 @@
 
 Backend of **Will of the Void**, a digital collectible card game developed for the Laboratorio Integrato (group 08).
 
-Stack: Java 21, Spring Boot 3, PostgreSQL. The source code will be added in the next phases.
+Stack: Java 25, Spring Boot 4.1.2, PostgreSQL. The source code will be added in the next phases.
 
 ## Documentation
 

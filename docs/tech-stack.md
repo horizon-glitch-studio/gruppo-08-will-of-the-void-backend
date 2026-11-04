@@ -1,6 +1,6 @@
 # Will of the Void – Backend tech stack
 
-The backend is a Java 21 application built with Spring Boot 3 and PostgreSQL. Most of the stack is required by the project brief; the rest are libraries chosen for security, testing and API documentation.
+The backend is a Java 25 application built with Spring Boot 4.1.2 and PostgreSQL. Most of the stack is required by the project brief; the rest are libraries chosen for security, testing and API documentation.
 
 ## Language and core tools
 
@@ -8,8 +8,8 @@ Java, Spring Boot and GitHub are required by the brief. The other choices are th
 
 | Technology | Role | Why |
 | --- | --- | --- |
-| Java 21 | Server-side language | Required by the brief. It is the latest LTS (long-term support) version supported by Spring Boot 3, and its records and pattern matching keep the models for cards, clashes and engine results short. |
-| Spring Boot 3 | Framework for the REST API and the business logic | Required by the brief. It configures the web server, database access and security automatically, so the team's time goes into the game rules rather than the infrastructure. |
+| Java 25 | Server-side language | Required by the brief. |
+| Spring Boot 4.1.2 | Framework for the REST API and the business logic | Required by the brief. It configures the web server, database access and security automatically, so the team's time goes into the game rules rather than the infrastructure. |
 | Maven | Build and dependency management | The default tool of Spring Initializr. It lets the game engine live in a separate module, as the brief requires ("an isolated Java component"). |
 | Spring Data JPA + Hibernate 6 | Data access | Repositories generate the most common queries without hand-written SQL. Hibernate 6 maps PostgreSQL `jsonb` columns directly. |
 | Bean Validation (Jakarta Validation) | Input validation | Constraints are written as annotations on the DTOs (`@NotNull`, `@Size`, `@Min`), and Spring rejects invalid requests before they reach the business logic. |
@@ -30,7 +30,7 @@ Each dependency covers a requirement of the brief or a feature the team decided 
 | Spring Validation (Hibernate Validator) | Request validation and server-side constraints | The brief requires the portal to check deck constraints. Server-side validation is the only reliable kind, because client-side validation can be bypassed. |
 | JUnit 5 & AssertJ | Testing the game engine | The brief requires the engine to be isolated and covered by JUnit tests. AssertJ makes assertions read like sentences, which helps when checking long battle logs and edge cases. |
 | Lombok | Less boilerplate | Generates getters, setters, constructors and builders, so entities stay short and readable. The whole team must use it the same way, decided at the start. |
-| Springdoc OpenAPI (Swagger UI) | Interactive API documentation | The library that produces the Swagger documentation required by the brief, compatible with Spring Boot 3. |
+| Springdoc OpenAPI (Swagger UI) | Interactive API documentation | The library that produces the Swagger documentation required by the brief, compatible with Spring Boot 4.1.2. |
 
 The features the team decided on need two dependencies that are not in this list yet: Spring WebSocket (real-time FRIEND challenges and online friends) and Flyway (versioned schema migrations and initial data).
 
