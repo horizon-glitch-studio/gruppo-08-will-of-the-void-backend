@@ -86,6 +86,7 @@ Every card has a faction and a rarity. The game rules (faction advantages, rarit
 | rarity → card.rarity_id | 1 → 0..N | The card's rarity. `rarity` also stores total points, maximum copies, maximum per deck, duration and whether the card can be traded. |
 | card → starter_deck_card.card_id | 1 → 0..1 | The 30 cards of the starter deck, the same for every new player. Each card appears at most once, with its copies in `quantity`. |
 | pack_type → pack_slot.pack_type_id | 1 → 1..N | The pack's slots. The total number of cards is the sum of `card_count`. |
+| pack_type.available_from / available_until | – | The purchase window of an event pack. Both empty for the regular packs, which are always on sale. |
 | rarity → pack_slot.rarity_id | 1 → 0..N | The base rarity of the cards in the slot. |
 | rarity → pack_slot.upgrade_rarity_id | 0..1 → 0..N | The rarity the slot can turn into, with probability `upgrade_chance`. This is how Wanderers stay rare. In the diagram `rarity` is drawn a second time, as "rarity (upgrade)", so that the line does not overlap the base rarity one. |
 | pack_type → pack_opening.pack_type_id | 1 → 0..N | Every opening refers to one pack type. |
@@ -94,6 +95,8 @@ Every card has a faction and a rarity. The game rules (faction advantages, rarit
 | card → pack_opening_card.card_id | 1 → 0..N | A card can be drawn in many openings; two copies in the same pack are one row with `quantity` 2. |
 
 **How a pack keeps a fixed number of cards per rarity and still makes Wanderers rare.** Each slot has a fixed number of cards of a base rarity. A slot can also have an upgrade: with probability `upgrade_chance`, its cards come from `upgrade_rarity_id` instead. For example, a slot of 1 Champion with a 5% upgrade to Wanderer gives a Wanderer in about one pack out of twenty. Two CHECK constraints require `upgrade_rarity_id` and `upgrade_chance` to be both set or both empty, and the upgrade rarity to differ from the base one. In `rarity`, `max_per_deck` and `duration_days` must be greater than 0 when they are set.
+
+**Wanderers are found only during events.** Regular packs have no slot that upgrades to Wanderer. Each event has its own `pack_type` with a Wanderer upgrade slot and a purchase window, `available_from` to `available_until`: the backend sells it only inside that window, so no probability has to be changed when an event starts or ends. A CHECK constraint (`chk_pack_availability_window`) requires the end to come after the start. Every opening points to its `pack_type`, so the history always shows which pack, and which probabilities, a Wanderer came from.
 
 The opening history makes it possible to show that the pack probabilities work as declared.
 
@@ -209,5 +212,7 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | Opponent list refreshed only after the cooldown | Refreshing the list, checking `last_refresh_at` |
 | Credits and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
 | A Wanderer found again extends its stay instead of adding a copy | Opening a pack |
+| Only event packs (with a purchase window) have a slot that upgrades to Wanderer | Creating and editing a pack type in the backoffice |
+| An event pack is sold only between `available_from` and `available_until` | Buying a pack, checking the time server-side |
 
 Rules that involve only the columns of one row are CHECK constraints in the schema, so the database enforces them: positive quantities, attack and defense from 1 to 10, two different players in a trade, battle, friendship or opponent list, a credit transaction consistent with its reason, a trade closed only when it is no longer PENDING, the battle columns that depend on the mode and status, a single copy for Wanderers.
