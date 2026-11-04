@@ -1,0 +1,501 @@
+// Will of the Void – database schema (PostgreSQL 16)
+// Paste into https://dbdiagram.io
+// Enumerated values are varchar columns with CHECK constraints.
+// All timestamps are timestamptz.
+// Partial indexes cannot be written in DBML: they are listed in the notes
+// of their tables and defined at the end of schema.sql.
+
+Project will_of_the_void {
+  database_type: 'PostgreSQL'
+  Note: 'Digital collectible card game – Laboratorio Integrato, group 08'
+}
+
+// =====================================================================
+// 1 · PLAYER, CREDITS AND NOTIFICATIONS
+// =====================================================================
+
+Table player {
+  id                  bigint       [pk, increment]
+  username            varchar(50)  [not null, note: 'unique ignoring case (uq_player_username_lower)']
+  email               varchar(255) [not null, note: 'unique ignoring case (uq_player_email_lower)']
+  password_hash       varchar(255) [not null]
+  role                varchar(10)  [not null, default: 'USER', check: `role IN ('USER', 'ADMIN')`]
+  email_verified_at   timestamptz
+  defense_deck_id     bigint       [unique, note: 'must belong to the same player (checked in the service)']
+  credit_balance      int          [not null, default: 0, check: `credit_balance >= 0`, note: 'changed only with atomic UPDATEs, never through the JPA entity']
+  trophies            int          [not null, default: 0, check: `trophies >= 0`, note: 'changed only with atomic UPDATEs; the service clamps the Elo result at 0']
+  last_daily_bonus_at timestamptz
+  protected_until     timestamptz  [note: 'protection after N attacks received']
+  invite_code         varchar(20)  [not null, unique]
+  invited_by_id       bigint
+  version             int          [not null, default: 0, note: 'JPA optimistic locking for profile data only (not credits or trophies)']
+  created_at          timestamptz  [not null, default: `now()`]
+  deleted_at          timestamptz  [note: 'soft delete: username and email are anonymised']
+
+  indexes {
+    `lower(username)` [unique, name: 'uq_player_username_lower']
+    `lower(email)` [unique, name: 'uq_player_email_lower']
+    trophies
+  }
+}
+
+Table player_token {
+  id         bigint      [pk, increment]
+  player_id  bigint      [not null]
+  type       varchar(20) [not null, check: `type IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET', 'REFRESH')`]
+  token_hash varchar(64) [not null, unique, note: 'SHA-256 of the token, hex; the token itself is never stored']
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz [not null]
+  used_at    timestamptz [note: 'null = still usable (if not expired)']
+
+  indexes {
+    (player_id, type)
+  }
+  checks {
+    `expires_at > created_at` [name: 'chk_token_expiry_after_creation']
+  }
+  Note: 'Email verification, password reset and JWT refresh tokens'
+}
+
+Table credit_transaction {
+  id                bigint       [pk, increment]
+  player_id         bigint       [not null]
+  amount            int          [not null, note: 'positive = income, negative = expense']
+  reason            varchar(30)  [not null, check: `reason IN ('REGISTRATION_BONUS', 'DAILY_BONUS', 'INVITE_BONUS', 'PACK_PURCHASE')`]
+  pack_opening_id   bigint       [unique]
+  invited_player_id bigint       [unique, note: 'one invite bonus per invited player, after 10 battles']
+  created_at        timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (player_id, created_at)
+  }
+  checks {
+    `(reason = 'PACK_PURCHASE' AND pack_opening_id IS NOT NULL AND invited_player_id IS NULL AND amount < 0) OR (reason = 'INVITE_BONUS' AND invited_player_id IS NOT NULL AND pack_opening_id IS NULL AND amount > 0) OR (reason IN ('REGISTRATION_BONUS', 'DAILY_BONUS') AND pack_opening_id IS NULL AND invited_player_id IS NULL AND amount > 0)` [name: 'chk_credit_reason_consistent']
+  }
+  Note: 'Partial index uq_credit_registration_bonus: one REGISTRATION_BONUS per player'
+}
+
+Table notification {
+  id            bigint      [pk, increment]
+  player_id     bigint      [not null]
+  type          varchar(30) [not null, check: `type IN ('ATTACK_RECEIVED', 'TRADE_RECEIVED', 'TRADE_ACCEPTED', 'TRADE_REJECTED', 'TRADE_CANCELLED', 'TRADE_EXPIRED', 'TRADE_FAILED', 'WANDERER_DEPARTED', 'DECK_INVALID', 'INVITE_BONUS', 'FRIEND_REQUEST_RECEIVED', 'FRIEND_REQUEST_ACCEPTED')`]
+  battle_id     bigint
+  trade_id      bigint
+  card_id       bigint      [note: 'the Wanderer that departed']
+  friendship_id bigint      [note: 'deleted together with the friendship']
+  is_read       boolean     [not null, default: false]
+  created_at    timestamptz [not null, default: `now()`]
+
+  indexes {
+    (player_id, is_read)
+  }
+}
+
+// =====================================================================
+// 2 · COLLECTION AND DECKS
+// =====================================================================
+
+Table collection_card {
+  player_id   bigint      [not null]
+  card_id     bigint      [not null]
+  quantity    int         [not null, check: `quantity > 0`]
+  acquired_at timestamptz [not null, default: `now()`, note: 'Wanderers: when they arrived on board; copied to memory_archive.arrived_at']
+  expires_at  timestamptz [note: 'Wanderers only: 7 days from arrival, +7 days each time they are found again']
+
+  indexes {
+    (player_id, card_id) [pk]
+  }
+  checks {
+    `expires_at IS NULL OR quantity = 1` [name: 'chk_wanderer_single_copy']
+    `expires_at IS NULL OR expires_at > acquired_at` [name: 'chk_wanderer_expiry_after_arrival']
+  }
+  Note: 'Partial index ix_collection_card_expires_at (WHERE expires_at IS NOT NULL) for the Wanderer departure job'
+}
+
+Table memory_archive {
+  id          bigint      [pk, increment]
+  player_id   bigint      [not null]
+  card_id     bigint      [not null]
+  arrived_at  timestamptz [not null]
+  departed_at timestamptz [not null]
+
+  indexes {
+    player_id
+  }
+  Note: 'Wanderers that have left: visible but not playable'
+}
+
+Table deck {
+  id         bigint       [pk, increment]
+  player_id  bigint       [not null]
+  name       varchar(100) [not null]
+  status     varchar(12)  [not null, default: 'INCOMPLETE', check: `status IN ('INCOMPLETE', 'VALID', 'INVALID')`, note: 'recomputed after: card edited in the backoffice, Wanderer departed, trade accepted']
+  created_at timestamptz  [not null, default: `now()`]
+  updated_at timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (player_id, name) [unique, name: 'uq_deck_player_name']
+  }
+}
+
+Table deck_card {
+  deck_id  bigint [not null]
+  card_id  bigint [not null]
+  quantity int    [not null, check: `quantity > 0`]
+
+  indexes {
+    (deck_id, card_id) [pk]
+    card_id
+  }
+}
+
+// =====================================================================
+// 3 · CATALOG AND PACKS
+// =====================================================================
+
+Table faction {
+  id       int         [pk, increment]
+  name     varchar(50) [not null, unique]
+  is_inert boolean     [not null, default: false, note: 'true for the Noble Gases: no advantage or disadvantage']
+}
+
+Table faction_advantage {
+  dominant_faction_id  int        [not null]
+  dominated_faction_id int        [not null]
+  type                 varchar(8) [not null, check: `type IN ('ATTACK', 'DEFENSE')`]
+  value                int        [not null, default: 2, check: `value > 0`]
+
+  indexes {
+    (dominant_faction_id, dominated_faction_id) [pk]
+    (`LEAST(dominant_faction_id, dominated_faction_id)`, `GREATEST(dominant_faction_id, dominated_faction_id)`) [unique, name: 'uq_faction_advantage_pair']
+  }
+  checks {
+    `dominant_faction_id <> dominated_faction_id` [name: 'chk_advantage_different_factions']
+  }
+  Note: '12 rows; at most one direction per pair of factions'
+}
+
+Table rarity {
+  id                  int         [pk, increment]
+  name                varchar(50) [not null, unique]
+  sort_order          int         [not null, unique]
+  total_points        int         [not null, check: `total_points > 0`, note: 'required Attack + Defense']
+  max_copies_per_deck int         [not null, check: `max_copies_per_deck > 0`]
+  max_per_deck        int         [check: `max_per_deck > 0`, note: 'null = no limit']
+  duration_days       int         [check: `duration_days > 0`, note: 'null = permanent; 7 for Wanderers']
+  is_tradeable        boolean     [not null, default: true]
+}
+
+Table card {
+  id          bigint       [pk, increment]
+  name        varchar(100) [not null, unique]
+  description text
+  image_url   varchar(255)
+  faction_id  int          [not null]
+  rarity_id   int          [not null]
+  attack      smallint     [not null, check: `attack BETWEEN 1 AND 10`]
+  defense     smallint     [not null, check: `defense BETWEEN 1 AND 10`]
+  is_active   boolean      [not null, default: true, note: 'cards are deactivated, never deleted']
+  updated_at  timestamptz  [not null, default: `now()`]
+}
+
+Table starter_deck_card {
+  card_id  bigint [pk]
+  quantity int    [not null, check: `quantity > 0`]
+
+  Note: 'Starter deck, the same for everyone: 30 cards, valid, no Wanderers'
+}
+
+Table pack_type {
+  id          int          [pk, increment]
+  name        varchar(100) [not null]
+  credit_cost int          [not null, check: `credit_cost > 0`]
+  is_active   boolean      [not null, default: true]
+}
+
+Table pack_slot {
+  pack_type_id      int          [not null]
+  position          smallint     [not null]
+  rarity_id         int          [not null, note: 'base rarity of the cards in this slot']
+  card_count        int          [not null, check: `card_count > 0`]
+  upgrade_rarity_id int          [note: 'rarity the slot can turn into, e.g. Wanderer']
+  upgrade_chance    numeric(5,2) [check: `upgrade_chance > 0 AND upgrade_chance <= 100`, note: 'percentage']
+
+  indexes {
+    (pack_type_id, position) [pk]
+  }
+  checks {
+    `(upgrade_rarity_id IS NULL) = (upgrade_chance IS NULL)` [name: 'chk_slot_upgrade_complete']
+    `upgrade_rarity_id <> rarity_id` [name: 'chk_slot_upgrade_different_rarity']
+  }
+  Note: 'Fixed number of cards per rarity; a slot can upgrade to a higher rarity with a given chance'
+}
+
+Table pack_opening {
+  id            bigint      [pk, increment]
+  player_id     bigint      [not null]
+  pack_type_id  int         [not null]
+  credits_spent int         [not null, note: 'price paid on that day']
+  created_at    timestamptz [not null, default: `now()`]
+
+  indexes {
+    (player_id, created_at)
+  }
+}
+
+Table pack_opening_card {
+  pack_opening_id bigint [not null]
+  card_id         bigint [not null]
+  quantity        int    [not null, check: `quantity > 0`]
+
+  indexes {
+    (pack_opening_id, card_id) [pk]
+  }
+}
+
+// =====================================================================
+// 4 · TRADES
+// =====================================================================
+
+Table trade {
+  id           bigint      [pk, increment]
+  proposer_id  bigint      [not null]
+  recipient_id bigint      [not null]
+  status       varchar(10) [not null, default: 'PENDING', check: `status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', 'EXPIRED', 'FAILED')`]
+  created_at   timestamptz [not null, default: `now()`]
+  expires_at   timestamptz [not null, note: '48 hours after creation']
+  closed_at    timestamptz [note: 'null only while PENDING']
+
+  indexes {
+    (recipient_id, status)
+    (proposer_id, status)
+    (status, expires_at)
+  }
+  checks {
+    `proposer_id <> recipient_id` [name: 'chk_trade_different_players']
+    `(status = 'PENDING') = (closed_at IS NULL)` [name: 'chk_trade_closed_when_not_pending']
+  }
+}
+
+Table trade_card {
+  trade_id bigint     [not null]
+  card_id  bigint     [not null]
+  side     varchar(8) [not null, check: `side IN ('OFFER', 'REQUEST')`, note: 'OFFER: proposer to recipient; REQUEST: recipient to proposer']
+  quantity int        [not null, check: `quantity > 0`]
+
+  indexes {
+    (trade_id, card_id, side) [pk]
+  }
+}
+
+// =====================================================================
+// 5 · BATTLES
+// =====================================================================
+
+Table battle {
+  id                        bigint      [pk, increment]
+  mode                      varchar(8)  [not null, check: `mode IN ('FRIEND', 'QUICK', 'RANKED')`]
+  status                    varchar(10) [not null, check: `status IN ('PENDING', 'REJECTED', 'EXPIRED', 'CANCELLED', 'PLAYED')`]
+  challenger_id             bigint      [not null]
+  opponent_id               bigint      [not null]
+  challenger_deck_id        bigint      [note: 'attack deck chosen by the challenger']
+  opponent_deck_id          bigint      [note: 'FRIEND: deck chosen on acceptance; QUICK/RANKED: defense deck']
+  seed                      bigint      [note: 'generated server-side']
+  outcome                   varchar(16) [check: `outcome IN ('CHALLENGER_WIN', 'OPPONENT_WIN', 'DRAW')`, note: 'null until PLAYED']
+  challenger_energy         int         [check: `challenger_energy >= 0`, note: 'energy generated in the battle; 30 wins']
+  opponent_energy           int         [check: `opponent_energy >= 0`]
+  challenger_trophies_delta int         [note: 'RANKED only']
+  opponent_trophies_delta   int         [note: 'RANKED only']
+  decks_snapshot            jsonb       [note: 'copy of the two decks used']
+  created_at                timestamptz [not null, default: `now()`]
+  expires_at                timestamptz [note: 'FRIEND only: 30 seconds to accept']
+  played_at                 timestamptz
+
+  indexes {
+    (opponent_id, played_at)
+    (challenger_id, played_at)
+    challenger_deck_id
+    opponent_deck_id
+  }
+  checks {
+    `challenger_id <> opponent_id` [name: 'chk_battle_different_players']
+    `(status = 'PLAYED') = (outcome IS NOT NULL)` [name: 'chk_battle_outcome_when_played']
+    `mode = 'RANKED' OR (challenger_trophies_delta IS NULL AND opponent_trophies_delta IS NULL)` [name: 'chk_battle_trophies_ranked_only']
+    `mode = 'FRIEND' OR expires_at IS NULL` [name: 'chk_battle_expiry_friend_only']
+    `status <> 'PENDING' OR challenger_deck_id IS NOT NULL` [name: 'chk_battle_pending_has_deck']
+  }
+}
+
+Table battle_log {
+  battle_id bigint [pk]
+  turn_log  jsonb  [not null, note: 'turn-by-turn result']
+
+  Note: 'One row per PLAYED battle; separate table so the history list does not load the log (mapped LAZY)'
+}
+
+// =====================================================================
+// 6 · MATCHMAKING
+// =====================================================================
+
+Table opponent_list {
+  player_id       bigint      [not null]
+  mode            varchar(8)  [not null, check: `mode IN ('QUICK', 'RANKED')`]
+  generated_at    timestamptz [not null]
+  last_refresh_at timestamptz [note: 'refresh limited by a cooldown']
+
+  indexes {
+    (player_id, mode) [pk]
+  }
+}
+
+Table opponent_list_entry {
+  player_id              bigint     [not null]
+  mode                   varchar(8) [not null]
+  position               smallint   [not null, check: `position BETWEEN 1 AND 5`]
+  opponent_id            bigint     [not null]
+  trophies_at_generation int        [not null, note: 'display only']
+  battle_id              bigint     [unique, note: 'null = not attacked yet; an opponent can be attacked once per list']
+
+  indexes {
+    (player_id, mode, position) [pk]
+    (player_id, mode, opponent_id) [unique, name: 'uq_opponent_list_entry_opponent']
+  }
+  checks {
+    `player_id <> opponent_id` [name: 'chk_entry_not_self']
+  }
+}
+
+// =====================================================================
+// 7 · FRIENDSHIPS
+// =====================================================================
+
+Table friendship {
+  id           bigint      [pk, increment]
+  requester_id bigint      [not null]
+  addressee_id bigint      [not null]
+  status       varchar(10) [not null, default: 'PENDING', check: `status IN ('PENDING', 'ACCEPTED')`]
+  created_at   timestamptz [not null, default: `now()`]
+  accepted_at  timestamptz [note: 'null while PENDING']
+
+  indexes {
+    (`LEAST(requester_id, addressee_id)`, `GREATEST(requester_id, addressee_id)`) [unique, name: 'uq_friendship_pair']
+    addressee_id
+  }
+  checks {
+    `requester_id <> addressee_id` [name: 'chk_friendship_different_players']
+    `(status = 'ACCEPTED') = (accepted_at IS NOT NULL)` [name: 'chk_friendship_accepted_at']
+  }
+  Note: 'Rejecting a request or removing a friend deletes the row'
+}
+
+// =====================================================================
+// RELATIONSHIPS
+// =====================================================================
+
+// 1 · Player, credits and notifications
+Ref: player.defense_deck_id > deck.id [delete: set null]
+Ref: player.invited_by_id > player.id [delete: set null]
+Ref: player_token.player_id > player.id [delete: cascade]
+Ref: credit_transaction.player_id > player.id
+Ref: credit_transaction.pack_opening_id > pack_opening.id
+Ref: credit_transaction.invited_player_id > player.id
+Ref: notification.player_id > player.id
+Ref: notification.battle_id > battle.id
+Ref: notification.trade_id > trade.id
+Ref: notification.card_id > card.id
+Ref: notification.friendship_id > friendship.id [delete: cascade]
+
+// 2 · Collection and decks
+Ref: collection_card.player_id > player.id
+Ref: collection_card.card_id > card.id
+Ref: memory_archive.player_id > player.id
+Ref: memory_archive.card_id > card.id
+Ref: deck.player_id > player.id
+Ref: deck_card.deck_id > deck.id [delete: cascade]
+Ref: deck_card.card_id > card.id
+
+// 3 · Catalog and packs
+Ref: card.faction_id > faction.id
+Ref: card.rarity_id > rarity.id
+Ref: faction_advantage.dominant_faction_id > faction.id
+Ref: faction_advantage.dominated_faction_id > faction.id
+Ref: starter_deck_card.card_id > card.id
+Ref: pack_slot.pack_type_id > pack_type.id
+Ref: pack_slot.rarity_id > rarity.id
+Ref: pack_slot.upgrade_rarity_id > rarity.id
+Ref: pack_opening.player_id > player.id
+Ref: pack_opening.pack_type_id > pack_type.id
+Ref: pack_opening_card.pack_opening_id > pack_opening.id
+Ref: pack_opening_card.card_id > card.id
+
+// 4 · Trades
+Ref: trade.proposer_id > player.id
+Ref: trade.recipient_id > player.id
+Ref: trade_card.trade_id > trade.id [delete: cascade]
+Ref: trade_card.card_id > card.id
+
+// 5 · Battles
+Ref: battle.challenger_id > player.id
+Ref: battle.opponent_id > player.id
+Ref: battle.challenger_deck_id > deck.id [delete: set null]
+Ref: battle.opponent_deck_id > deck.id [delete: set null]
+Ref: battle_log.battle_id > battle.id [delete: cascade]
+
+// 6 · Matchmaking
+Ref: opponent_list.player_id > player.id [delete: cascade]
+Ref: opponent_list_entry.(player_id, mode) > opponent_list.(player_id, mode) [delete: cascade]
+Ref: opponent_list_entry.opponent_id > player.id [delete: cascade]
+Ref: opponent_list_entry.battle_id > battle.id
+
+// 7 · Friendships
+Ref: friendship.requester_id > player.id
+Ref: friendship.addressee_id > player.id
+
+// =====================================================================
+// GROUPS
+// =====================================================================
+
+TableGroup g1_player_credits_notifications {
+  player
+  player_token
+  credit_transaction
+  notification
+}
+
+TableGroup g2_collection_decks {
+  collection_card
+  memory_archive
+  deck
+  deck_card
+}
+
+TableGroup g3_catalog_packs {
+  faction
+  faction_advantage
+  rarity
+  card
+  starter_deck_card
+  pack_type
+  pack_slot
+  pack_opening
+  pack_opening_card
+}
+
+TableGroup g4_trades {
+  trade
+  trade_card
+}
+
+TableGroup g5_battles {
+  battle
+  battle_log
+}
+
+TableGroup g6_matchmaking {
+  opponent_list
+  opponent_list_entry
+}
+
+TableGroup g7_friendships {
+  friendship
+}
