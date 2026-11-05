@@ -316,19 +316,3 @@ CREATE UNIQUE INDEX "uq_opponent_list_entry_opponent" ON "opponent_list_entry" (
 CREATE UNIQUE INDEX "uq_credit_registration_bonus" ON "credit_transaction" ("player_id") WHERE reason = 'REGISTRATION_BONUS';
 
 CREATE UNIQUE INDEX "uq_friendship_pair" ON "friendship" ((LEAST(requester_id, addressee_id)), (GREATEST(requester_id, addressee_id)));
-
-COMMENT ON TABLE "player_token" IS 'Email verification, password reset and JWT refresh tokens';
-
-COMMENT ON TABLE "memory_archive" IS 'Wanderers that have left: visible but not playable';
-
-COMMENT ON TABLE "faction_advantage" IS '12 rows; at most one direction per pair of factions';
-
-COMMENT ON TABLE "starter_deck_card" IS 'Starter deck, the same for everyone: 30 cards, valid, no Wanderers';
-
-COMMENT ON TABLE "pack_type" IS 'Wanderers drop only from event packs, which can be bought between available_from and available_until';
-
-COMMENT ON TABLE "pack_slot" IS 'Fixed number of cards per rarity; a slot can upgrade to a higher rarity with a given chance';
-
-COMMENT ON TABLE "battle_log" IS 'One row per PLAYED battle; separate table so the history list does not load the log (mapped LAZY)';
-
-COMMENT ON TABLE "friendship" IS 'Rejecting a request or removing a friend deletes the row';

@@ -4,6 +4,16 @@ The database runs on PostgreSQL 16 and has 24 tables, split into 7 views. Each v
 
 The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. When the schema changes, the diagrams in this file are updated by hand. The same script is the first Flyway migration, `api/src/main/resources/db/migration/V1__init.sql`: once applied it is never edited, and every later change goes into a new `V2__...` migration.
 
+| Area | Tables | Contents |
+| --- | --- | --- |
+| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `player_token`, `credit_transaction`, `notification` | The account and its tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
+| [2 · Collection and decks](#2--collection-and-decks) | `collection_card`, `memory_archive`, `deck`, `deck_card` | The cards each player owns, the departed Wanderers, and the saved decks with their cards. |
+| [3 · Catalog and packs](#3--catalog-and-packs) | `faction`, `faction_advantage`, `rarity`, `card`, `starter_deck_card`, `pack_type`, `pack_slot`, `pack_opening`, `pack_opening_card` | The card catalog with factions, advantages and rarities, the starter deck, the pack types with their slots, and the history of opened packs. |
+| [4 · Trades](#4--trades) | `trade`, `trade_card` | Trades between two players, with the cards offered and requested. |
+| [5 · Battles](#5--battles) | `battle`, `battle_log` | Battles in every mode (FRIEND, QUICK, RANKED) with result, energy and trophies, and the turn-by-turn log kept apart. |
+| [6 · Matchmaking](#6--matchmaking) | `opponent_list`, `opponent_list_entry` | The saved list of 5 opponents per mode, and the battle played against each of them. |
+| [7 · Friendships](#7--friendships) | `friendship` | Friend requests and accepted friendships. |
+
 ## How to read the diagrams
 
 The diagrams are written in [Mermaid](https://mermaid.js.org/syntax/entityRelationshipDiagram.html), so GitHub draws them directly from this file and they are edited as text.
