@@ -1,8 +1,7 @@
 -- Will of the Void – database schema (PostgreSQL 16)
--- First generated from will-of-the-void.dbml with @dbml/cli (dbml2sql --postgres), then
--- reorganised by hand: each table declares its own foreign keys, so tables are created
--- after the tables they reference. A change to the DBML must be copied here by hand.
--- The partial indexes at the end cannot be expressed in DBML.
+-- Each table declares its own foreign keys, so tables are created after the tables they
+-- reference. The unique indexes at the end are game rules (unique names, one bonus,
+-- no duplicate pairs), so they cannot be removed for performance reasons.
 -- This file is also the Flyway migration api/src/main/resources/db/migration/V1__init.sql
 -- 24 tables. Do not edit V1 after it has been applied: add a new V2__... migration.
 
@@ -307,162 +306,29 @@ CREATE UNIQUE INDEX "uq_player_username_lower" ON "player" ((lower(username)));
 
 CREATE UNIQUE INDEX "uq_player_email_lower" ON "player" ((lower(email)));
 
-CREATE INDEX ON "player" ("trophies");
-
-CREATE INDEX ON "player_token" ("player_id", "type");
-
-CREATE INDEX ON "credit_transaction" ("player_id", "created_at");
-
-CREATE INDEX ON "notification" ("player_id", "is_read");
-
-CREATE INDEX ON "memory_archive" ("player_id");
-
 CREATE UNIQUE INDEX "uq_deck_player_name" ON "deck" ("player_id", "name");
-
-CREATE INDEX ON "deck_card" ("card_id");
 
 CREATE UNIQUE INDEX "uq_faction_advantage_pair" ON "faction_advantage" ((LEAST(dominant_faction_id, dominated_faction_id)), (GREATEST(dominant_faction_id, dominated_faction_id)));
 
-CREATE INDEX ON "pack_opening" ("player_id", "created_at");
-
-CREATE INDEX ON "trade" ("recipient_id", "status");
-
-CREATE INDEX ON "trade" ("proposer_id", "status");
-
-CREATE INDEX ON "trade" ("status", "expires_at");
-
-CREATE INDEX ON "battle" ("opponent_id", "played_at");
-
-CREATE INDEX ON "battle" ("challenger_id", "played_at");
-
-CREATE INDEX ON "battle" ("challenger_deck_id");
-
-CREATE INDEX ON "battle" ("opponent_deck_id");
-
 CREATE UNIQUE INDEX "uq_opponent_list_entry_opponent" ON "opponent_list_entry" ("player_id", "mode", "opponent_id");
+
+-- One registration bonus per player
+CREATE UNIQUE INDEX "uq_credit_registration_bonus" ON "credit_transaction" ("player_id") WHERE reason = 'REGISTRATION_BONUS';
 
 CREATE UNIQUE INDEX "uq_friendship_pair" ON "friendship" ((LEAST(requester_id, addressee_id)), (GREATEST(requester_id, addressee_id)));
 
-CREATE INDEX ON "friendship" ("addressee_id");
-
-COMMENT ON COLUMN "player"."username" IS 'unique ignoring case (uq_player_username_lower)';
-
-COMMENT ON COLUMN "player"."email" IS 'unique ignoring case (uq_player_email_lower)';
-
-COMMENT ON COLUMN "player"."defense_deck_id" IS 'must belong to the same player (checked in the service)';
-
-COMMENT ON COLUMN "player"."credit_balance" IS 'changed only with atomic UPDATEs, never through the JPA entity';
-
-COMMENT ON COLUMN "player"."trophies" IS 'changed only with atomic UPDATEs; the service clamps the Elo result at 0';
-
-COMMENT ON COLUMN "player"."protected_until" IS 'protection after N attacks received';
-
-COMMENT ON COLUMN "player"."version" IS 'JPA optimistic locking for profile data only (not credits or trophies)';
-
-COMMENT ON COLUMN "player"."deleted_at" IS 'soft delete: username and email are anonymised';
-
 COMMENT ON TABLE "player_token" IS 'Email verification, password reset and JWT refresh tokens';
-
-COMMENT ON COLUMN "player_token"."token_hash" IS 'SHA-256 of the token, hex; the token itself is never stored';
-
-COMMENT ON COLUMN "player_token"."used_at" IS 'null = still usable (if not expired)';
-
-COMMENT ON TABLE "credit_transaction" IS 'Partial index uq_credit_registration_bonus: one REGISTRATION_BONUS per player';
-
-COMMENT ON COLUMN "credit_transaction"."amount" IS 'positive = income, negative = expense';
-
-COMMENT ON COLUMN "credit_transaction"."invited_player_id" IS 'one invite bonus per invited player, after 10 battles';
-
-COMMENT ON COLUMN "notification"."card_id" IS 'the Wanderer that departed';
-
-COMMENT ON COLUMN "notification"."friendship_id" IS 'deleted together with the friendship';
-
-COMMENT ON TABLE "collection_card" IS 'Partial index ix_collection_card_expires_at (WHERE expires_at IS NOT NULL) for the Wanderer departure job';
-
-COMMENT ON COLUMN "collection_card"."acquired_at" IS 'Wanderers: when they arrived on board; copied to memory_archive.arrived_at';
-
-COMMENT ON COLUMN "collection_card"."expires_at" IS 'Wanderers only: 7 days from arrival, +7 days each time they are found again';
 
 COMMENT ON TABLE "memory_archive" IS 'Wanderers that have left: visible but not playable';
 
-COMMENT ON COLUMN "deck"."status" IS 'recomputed after: card edited in the backoffice, Wanderer departed, trade accepted';
-
-COMMENT ON COLUMN "faction"."is_inert" IS 'true for the Noble Gases: no advantage or disadvantage';
-
 COMMENT ON TABLE "faction_advantage" IS '12 rows; at most one direction per pair of factions';
-
-COMMENT ON COLUMN "rarity"."total_points" IS 'required Attack + Defense';
-
-COMMENT ON COLUMN "rarity"."max_per_deck" IS 'null = no limit';
-
-COMMENT ON COLUMN "rarity"."duration_days" IS 'null = permanent; 7 for Wanderers';
-
-COMMENT ON COLUMN "card"."is_active" IS 'cards are deactivated, never deleted';
 
 COMMENT ON TABLE "starter_deck_card" IS 'Starter deck, the same for everyone: 30 cards, valid, no Wanderers';
 
 COMMENT ON TABLE "pack_type" IS 'Wanderers drop only from event packs, which can be bought between available_from and available_until';
 
-COMMENT ON COLUMN "pack_type"."available_from" IS 'event packs: start of the event; null = always available';
-
-COMMENT ON COLUMN "pack_type"."available_until" IS 'event packs: end of the event; null = no end';
-
 COMMENT ON TABLE "pack_slot" IS 'Fixed number of cards per rarity; a slot can upgrade to a higher rarity with a given chance';
-
-COMMENT ON COLUMN "pack_slot"."rarity_id" IS 'base rarity of the cards in this slot';
-
-COMMENT ON COLUMN "pack_slot"."upgrade_rarity_id" IS 'rarity the slot can turn into, e.g. Wanderer';
-
-COMMENT ON COLUMN "pack_slot"."upgrade_chance" IS 'percentage';
-
-COMMENT ON COLUMN "pack_opening"."credits_spent" IS 'price paid on that day';
-
-COMMENT ON COLUMN "trade"."expires_at" IS '48 hours after creation';
-
-COMMENT ON COLUMN "trade"."closed_at" IS 'null only while PENDING';
-
-COMMENT ON COLUMN "trade_card"."side" IS 'OFFER: proposer to recipient; REQUEST: recipient to proposer';
-
-COMMENT ON COLUMN "battle"."challenger_deck_id" IS 'attack deck chosen by the challenger';
-
-COMMENT ON COLUMN "battle"."opponent_deck_id" IS 'FRIEND: deck chosen on acceptance; QUICK/RANKED: defense deck';
-
-COMMENT ON COLUMN "battle"."seed" IS 'generated server-side';
-
-COMMENT ON COLUMN "battle"."outcome" IS 'null until PLAYED';
-
-COMMENT ON COLUMN "battle"."challenger_energy" IS 'energy generated in the battle; 30 wins';
-
-COMMENT ON COLUMN "battle"."challenger_trophies_delta" IS 'RANKED only';
-
-COMMENT ON COLUMN "battle"."opponent_trophies_delta" IS 'RANKED only';
-
-COMMENT ON COLUMN "battle"."decks_snapshot" IS 'copy of the two decks used';
-
-COMMENT ON COLUMN "battle"."expires_at" IS 'FRIEND only: 30 seconds to accept';
 
 COMMENT ON TABLE "battle_log" IS 'One row per PLAYED battle; separate table so the history list does not load the log (mapped LAZY)';
 
-COMMENT ON COLUMN "battle_log"."turn_log" IS 'turn-by-turn result';
-
-COMMENT ON COLUMN "opponent_list"."last_refresh_at" IS 'refresh limited by a cooldown';
-
-COMMENT ON COLUMN "opponent_list_entry"."trophies_at_generation" IS 'display only';
-
-COMMENT ON COLUMN "opponent_list_entry"."battle_id" IS 'null = not attacked yet; an opponent can be attacked once per list';
-
 COMMENT ON TABLE "friendship" IS 'Rejecting a request or removing a friend deletes the row';
-
-COMMENT ON COLUMN "friendship"."accepted_at" IS 'null while PENDING';
-
--- =====================================================================
--- Partial indexes (not expressible in DBML)
--- =====================================================================
-
--- One registration bonus per player
-CREATE UNIQUE INDEX "uq_credit_registration_bonus" ON "credit_transaction" ("player_id")
-  WHERE reason = 'REGISTRATION_BONUS';
-
--- Wanderer departure job: only rows that can expire
-CREATE INDEX "ix_collection_card_expires_at" ON "collection_card" ("expires_at")
-  WHERE expires_at IS NOT NULL;
