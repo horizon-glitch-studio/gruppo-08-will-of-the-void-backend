@@ -1,24 +1,35 @@
 # Will of the Void – Database schema
 
-The database runs on PostgreSQL 16 and has 24 tables, split into 7 views. Each view shows one area of the game and the relationships between its tables, with no crossing lines.
+The database runs on PostgreSQL 16 and has 24 tables, split into 7 views. Each view shows one area of the game and the relationships between its tables.
 
-The schema source is [`will-of-the-void.dbml`](will-of-the-void.dbml) (paste it into [dbdiagram.io](https://dbdiagram.io)); [`schema.sql`](schema.sql) is the PostgreSQL script generated from it with `dbml2sql`, plus two partial indexes that DBML cannot express (they are added by hand at the end of the file). The same script is the first Flyway migration, `api/src/main/resources/db/migration/V1__init.sql`: once applied it is never edited, and every later change goes into a new `V2__...` migration.
+The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. When the schema changes, the diagrams in this file are updated by hand. The same script is the first Flyway migration, `api/src/main/resources/db/migration/V1__init.sql`: once applied it is never edited, and every later change goes into a new `V2__...` migration.
+
+| Area | Tables | Contents |
+| --- | --- | --- |
+| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `player_token`, `credit_transaction`, `notification` | The account and its tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
+| [2 · Collection and decks](#2--collection-and-decks) | `collection_card`, `memory_archive`, `deck`, `deck_card` | The cards each player owns, the departed Wanderers, and the saved decks with their cards. |
+| [3 · Catalog and packs](#3--catalog-and-packs) | `faction`, `faction_advantage`, `rarity`, `card`, `starter_deck_card`, `pack_type`, `pack_slot`, `pack_opening`, `pack_opening_card` | The card catalog with factions, advantages and rarities, the starter deck, the pack types with their slots, and the history of opened packs. |
+| [4 · Trades](#4--trades) | `trade`, `trade_card` | Trades between two players, with the cards offered and requested. |
+| [5 · Battles](#5--battles) | `battle`, `battle_log` | Battles in every mode (FRIEND, QUICK, RANKED) with result, energy and trophies, and the turn-by-turn log kept apart. |
+| [6 · Matchmaking](#6--matchmaking) | `opponent_list`, `opponent_list_entry` | The saved list of 5 opponents per mode, and the battle played against each of them. |
+| [7 · Friendships](#7--friendships) | `friendship` | Friend requests and accepted friendships. |
 
 ## How to read the diagrams
 
-- **Solid box**: a table described in that view, with all its columns and types.
-- **Dashed box**: a table described in another view, showing only the linked columns. The caption below it names the view. "Same player table, repeated" marks a table of the same view drawn twice to avoid crossing lines.
-- **PK** primary key, **FK** foreign key, **UQ** unique.
-- **Every line** starts at the parent's primary key and ends at the child's FK column. The label on the line reads as a sentence: *player owns deck*.
+The diagrams are written in [Mermaid](https://mermaid.js.org/syntax/entityRelationshipDiagram.html), so GitHub draws them directly from this file and they are edited as text.
+
+- **Every table** lists its columns with type and keys: **PK** primary key, **FK** foreign key, **UK** unique.
+- **A table described in another view** shows only the linked columns, and the first one says which view describes it.
+- **The label on a line** reads as a sentence from the first table to the second: *player saves deck*.
 
 The symbol at each end of a line says how many rows of that table match one row of the table at the other end:
 
-| Symbol | Meaning |
-| --- | --- |
-| two bars | exactly one |
-| circle + bar | zero or one |
-| crow's foot + bar | one or more |
-| crow's foot + circle | zero or more |
+| Symbol | Mermaid | Meaning |
+| --- | --- | --- |
+| two bars | `\|\|` | exactly one |
+| circle + bar | `\|o` / `o\|` | zero or one |
+| crow's foot + bar | `\|{` / `}\|` | one or more |
+| crow's foot + circle | `o{` / `}o` | zero or more |
 
 In the relationship tables below, the **Cardinality** column reads from parent to child: "1 → 0..N" means that one parent row matches zero or more child rows.
 
@@ -26,7 +37,87 @@ In the relationship tables below, the **Cardinality** column reads from parent t
 
 Everything starts from `player`: the tokens for email verification, password reset and login refresh are in `player_token`, every change to the credit balance is recorded with its origin in `credit_transaction`, and what happens while the player is offline ends up in `notification`.
 
-![View 1: player, tokens, credit transactions and notifications](diagrams/db-1-player-credits-notifications.png)
+```mermaid
+erDiagram
+    player ||--o{ player_token : "owns"
+    player ||--o{ credit_transaction : "records"
+    player ||--o{ notification : "receives"
+    deck |o--o| player : "defends with"
+    player |o--o{ player : "invited"
+    pack_opening |o--o| credit_transaction : "payment"
+    player |o--o| credit_transaction : "invite bonus"
+    battle |o--o{ notification : "attack"
+    trade |o--o{ notification : "trade result"
+    card |o--o{ notification : "Wanderer left"
+    friendship |o--o{ notification : "friend request"
+    player {
+        bigint id PK
+        varchar(50) username UK
+        varchar(255) email UK
+        varchar(255) password_hash
+        varchar(10) role
+        timestamptz email_verified_at
+        bigint defense_deck_id FK, UK
+        int credit_balance
+        int trophies
+        timestamptz last_daily_bonus_at
+        timestamptz protected_until
+        varchar(20) invite_code UK
+        bigint invited_by_id FK
+        int version
+        timestamptz created_at
+        timestamptz deleted_at
+    }
+    player_token {
+        bigint id PK
+        bigint player_id FK
+        varchar(20) type
+        varchar(64) token_hash UK
+        timestamptz created_at
+        timestamptz expires_at
+        timestamptz used_at
+    }
+    credit_transaction {
+        bigint id PK
+        bigint player_id FK
+        int amount
+        varchar(30) reason
+        bigint pack_opening_id FK, UK
+        bigint invited_player_id FK, UK
+        timestamptz created_at
+    }
+    notification {
+        bigint id PK
+        bigint player_id FK
+        varchar(30) type
+        bigint battle_id FK
+        bigint trade_id FK
+        bigint card_id FK
+        bigint friendship_id FK
+        boolean is_read
+        timestamptz created_at
+    }
+    deck {
+        bigint id PK "described in view 2"
+        varchar(100) name
+    }
+    pack_opening {
+        bigint id PK "described in view 3"
+    }
+    battle {
+        bigint id PK "described in view 5"
+    }
+    trade {
+        bigint id PK "described in view 4"
+    }
+    card {
+        bigint id PK "described in view 3"
+        varchar(100) name UK
+    }
+    friendship {
+        bigint id PK "described in view 7"
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
@@ -44,7 +135,7 @@ Everything starts from `player`: the tokens for email verification, password res
 
 Three columns of `player` are not relationships but support game rules: `protected_until` (protection after N attacks received), `last_daily_bonus_at` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
 
-**Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UQ.
+**Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UK.
 
 **Credits and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `credit_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET credit_balance = credit_balance - :cost WHERE id = :id AND credit_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
@@ -56,7 +147,51 @@ In phase 1 credits come from three sources: the registration bonus, the daily lo
 
 Owned cards are stored in `collection_card` as quantities (one row per player and card), expired Wanderers move to `memory_archive`, and decks list their cards in `deck_card`.
 
-![View 2: collection, memory archive and decks](diagrams/db-2-collection-decks.png)
+```mermaid
+erDiagram
+    player ||--o{ collection_card : "owns"
+    card ||--o{ collection_card : "is collected"
+    player ||--o{ memory_archive : "remembers"
+    card ||--o{ memory_archive : "departed"
+    player ||--o{ deck : "saves"
+    deck ||--|{ deck_card : "contains"
+    card ||--o{ deck_card : "used in"
+    collection_card {
+        bigint player_id PK, FK
+        bigint card_id PK, FK
+        int quantity
+        timestamptz acquired_at
+        timestamptz expires_at
+    }
+    memory_archive {
+        bigint id PK
+        bigint player_id FK
+        bigint card_id FK
+        timestamptz arrived_at
+        timestamptz departed_at
+    }
+    deck {
+        bigint id PK
+        bigint player_id FK
+        varchar(100) name
+        varchar(12) status
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    deck_card {
+        bigint deck_id PK, FK
+        bigint card_id PK, FK
+        int quantity
+    }
+    player {
+        bigint id PK "described in view 1"
+        varchar(50) username UK
+    }
+    card {
+        bigint id PK "described in view 3"
+        varchar(100) name UK
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
@@ -64,19 +199,102 @@ Owned cards are stored in `collection_card` as quantities (one row per player an
 | card → collection_card.card_id | 1 → 0..N | The same card can be in many players' collections. With the relationship above, it forms a many-to-many between players and cards. |
 | player → memory_archive.player_id | 1 → 0..N | The player's departed Wanderers: visible but not playable. |
 | card → memory_archive.card_id | 1 → 0..N | The same Wanderer can leave and come back several times: each stay is a row, so the key is an `id`. |
-| player → deck.player_id | 1 → 0..N | A player can save any number of decks; each deck has one owner. Deck names are unique per player (`uq_deck_player_name`), and the same index serves the queries by `player_id`. |
+| player → deck.player_id | 1 → 0..N | A player can save any number of decks; each deck has one owner. Deck names are unique per player (`uq_deck_player_name`). |
 | deck → deck_card.deck_id | 1 → 1..N | The deck's cards with their copies. Deleting a deck deletes its rows. |
 | card → deck_card.card_id | 1 → 0..N | A card can appear in many decks. With the relationship above, it forms a many-to-many between decks and cards. |
 
-A Wanderer's life cycle uses two tables. When found in a pack it enters `collection_card` with `acquired_at` set to the arrival time and `expires_at` 7 days later. A Wanderer always has quantity 1: if it is found again while still on board, only `expires_at` moves forward by 7 days, and `acquired_at` stays the same. Two CHECK constraints enforce this: `expires_at IS NULL OR quantity = 1` and `expires_at > acquired_at`. When it expires, a scheduled job moves it to `memory_archive` (copying `acquired_at` into `arrived_at`), invalidates the decks that used it and creates a notification. The job reads the partial index `ix_collection_card_expires_at`, which contains only the rows with an expiry.
+A Wanderer's life cycle uses two tables. When found in a pack it enters `collection_card` with `acquired_at` set to the arrival time and `expires_at` 7 days later. A Wanderer always has quantity 1: if it is found again while still on board, only `expires_at` moves forward by 7 days, and `acquired_at` stays the same. Two CHECK constraints enforce this: `expires_at IS NULL OR quantity = 1` and `expires_at > acquired_at`. When it expires, a scheduled job moves it to `memory_archive` (copying `acquired_at` into `arrived_at`), invalidates the decks that used it and creates a notification.
 
-**When `deck.status` is recomputed.** The status is stored so it does not have to be computed on every read, and it is recomputed in three cases: a card is edited in the backoffice (the decks that contain it are found through the index on `deck_card.card_id`), a Wanderer departs, and a trade is accepted. In the last case, if a player trades away cards used in one of their decks, including the defense deck, that deck becomes INVALID and the player receives a DECK_INVALID notification.
+**When `deck.status` is recomputed.** The status is stored so it does not have to be computed on every read, and it is recomputed in three cases: a card is edited in the backoffice, a Wanderer departs, and a trade is accepted. In the last case, if a player trades away cards used in one of their decks, including the defense deck, that deck becomes INVALID and the player receives a DECK_INVALID notification.
 
 ## 3 · Catalog and packs
 
 Every card has a faction and a rarity. The game rules (faction advantages, rarity limits, starter deck, pack contents) live in tables that the backoffice can edit, not in the code.
 
-![View 3: card catalog, factions, rarities and packs](diagrams/db-3-catalog-packs.png)
+```mermaid
+erDiagram
+    faction ||--o{ faction_advantage : "prevails"
+    faction ||--o{ faction_advantage : "yields"
+    faction ||--o{ card : "groups"
+    rarity ||--o{ card : "ranks"
+    card ||--o| starter_deck_card : "starter deck"
+    pack_type ||--|{ pack_slot : "has slots"
+    rarity ||--o{ pack_slot : "base rarity"
+    rarity |o--o{ pack_slot : "upgrade"
+    pack_type ||--o{ pack_opening : "is opened"
+    player ||--o{ pack_opening : "opens"
+    pack_opening ||--|{ pack_opening_card : "draws"
+    card ||--o{ pack_opening_card : "is drawn"
+    faction {
+        int id PK
+        varchar(50) name UK
+        boolean is_inert
+    }
+    faction_advantage {
+        int dominant_faction_id PK, FK
+        int dominated_faction_id PK, FK
+        varchar(8) type
+        int value
+    }
+    rarity {
+        int id PK
+        varchar(50) name UK
+        int sort_order UK
+        int total_points
+        int max_copies_per_deck
+        int max_per_deck
+        int duration_days
+        boolean is_tradeable
+    }
+    card {
+        bigint id PK
+        varchar(100) name UK
+        text description
+        varchar(255) image_url
+        int faction_id FK
+        int rarity_id FK
+        smallint attack
+        smallint defense
+        boolean is_active
+        timestamptz updated_at
+    }
+    starter_deck_card {
+        bigint card_id PK, FK
+        int quantity
+    }
+    pack_type {
+        int id PK
+        varchar(100) name
+        int credit_cost
+        boolean is_active
+        timestamptz available_from
+        timestamptz available_until
+    }
+    pack_slot {
+        int pack_type_id PK, FK
+        smallint position PK
+        int rarity_id FK
+        int card_count
+        int upgrade_rarity_id FK
+        numeric upgrade_chance "numeric(5,2)"
+    }
+    pack_opening {
+        bigint id PK
+        bigint player_id FK
+        int pack_type_id FK
+        int credits_spent
+        timestamptz created_at
+    }
+    pack_opening_card {
+        bigint pack_opening_id PK, FK
+        bigint card_id PK, FK
+        int quantity
+    }
+    player {
+        bigint id PK "described in view 1"
+        varchar(50) username UK
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
@@ -88,7 +306,7 @@ Every card has a faction and a rarity. The game rules (faction advantages, rarit
 | pack_type → pack_slot.pack_type_id | 1 → 1..N | The pack's slots. The total number of cards is the sum of `card_count`. |
 | pack_type.available_from / available_until | – | The purchase window of an event pack. Both empty for the regular packs, which are always on sale. |
 | rarity → pack_slot.rarity_id | 1 → 0..N | The base rarity of the cards in the slot. |
-| rarity → pack_slot.upgrade_rarity_id | 0..1 → 0..N | The rarity the slot can turn into, with probability `upgrade_chance`. This is how Wanderers stay rare. In the diagram `rarity` is drawn a second time, as "rarity (upgrade)", so that the line does not overlap the base rarity one. |
+| rarity → pack_slot.upgrade_rarity_id | 0..1 → 0..N | The rarity the slot can turn into, with probability `upgrade_chance`. This is how Wanderers stay rare. |
 | pack_type → pack_opening.pack_type_id | 1 → 0..N | Every opening refers to one pack type. |
 | player → pack_opening.player_id | 1 → 0..N | Who opened the pack and how much they paid that day (`credits_spent`). |
 | pack_opening → pack_opening_card.pack_opening_id | 1 → 1..N | The cards drawn in that opening. |
@@ -104,7 +322,36 @@ The opening history makes it possible to show that the pack probabilities work a
 
 A trade links two players, and every card involved is a row of `trade_card` with its side: OFFER (from proposer to recipient) or REQUEST (from recipient to proposer). Trades such as 3 for 1 or 1 for 5 are just a different number of rows.
 
-![View 4: trades between players](diagrams/db-4-trades.png)
+```mermaid
+erDiagram
+    player ||--o{ trade : "proposes"
+    player ||--o{ trade : "receives"
+    trade ||--|{ trade_card : "contains"
+    card ||--o{ trade_card : "is traded"
+    trade {
+        bigint id PK
+        bigint proposer_id FK
+        bigint recipient_id FK
+        varchar(10) status
+        timestamptz created_at
+        timestamptz expires_at
+        timestamptz closed_at
+    }
+    trade_card {
+        bigint trade_id PK, FK
+        bigint card_id PK, FK
+        varchar(8) side PK
+        int quantity
+    }
+    player {
+        bigint id PK "described in view 1"
+        varchar(50) username UK
+    }
+    card {
+        bigint id PK "described in view 3"
+        varchar(100) name UK
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
@@ -113,13 +360,51 @@ A trade links two players, and every card involved is a row of `trade_card` with
 | trade → trade_card.trade_id | 1 → 1..N | The trade's cards; a trade without cards does not exist. |
 | card → trade_card.card_id | 1 → 0..N | The same card can appear in many trades at once: even a single copy can be offered to several players. |
 
-Because the same copy can be offered to several players, ownership is checked when the recipient accepts, not when the trade is proposed. Accepting a trade locks the `collection_card` rows involved (`SELECT ... FOR UPDATE`): if two players accept at the same instant, the second one finds the card already transferred and their trade becomes FAILED. Wanderers cannot be traded (`rarity.is_tradeable` = false). A CHECK constraint requires `closed_at` to be empty exactly while the trade is PENDING, and the index on `(status, expires_at)` serves the job that expires trades after 48 hours. Accepting a trade also recomputes the decks of both players (see view 2).
+Because the same copy can be offered to several players, ownership is checked when the recipient accepts, not when the trade is proposed. Accepting a trade locks the `collection_card` rows involved (`SELECT ... FOR UPDATE`): if two players accept at the same instant, the second one finds the card already transferred and their trade becomes FAILED. Wanderers cannot be traded (`rarity.is_tradeable` = false). A CHECK constraint requires `closed_at` to be empty exactly while the trade is PENDING A scheduled job expires trades after 48 hours. Accepting a trade also recomputes the decks of both players (see view 2).
 
 ## 5 · Battles
 
 A single `battle` table serves every mode: FRIEND (a challenge an online friend must accept within 30 seconds), QUICK and RANKED (an attack against an opponent from the list, who defends with their defense deck). The turn-by-turn log is in a separate table, `battle_log`.
 
-![View 5: battles](diagrams/db-5-battles.png)
+```mermaid
+erDiagram
+    player ||--o{ battle : "challenges"
+    player ||--o{ battle : "is challenged"
+    deck |o--o{ battle : "attack deck"
+    deck |o--o{ battle : "opponent deck"
+    battle ||--o| battle_log : "logs"
+    battle {
+        bigint id PK
+        varchar(8) mode
+        varchar(10) status
+        bigint challenger_id FK
+        bigint opponent_id FK
+        bigint challenger_deck_id FK
+        bigint opponent_deck_id FK
+        bigint seed
+        varchar(16) outcome
+        int challenger_energy
+        int opponent_energy
+        int challenger_trophies_delta
+        int opponent_trophies_delta
+        jsonb decks_snapshot
+        timestamptz created_at
+        timestamptz expires_at
+        timestamptz played_at
+    }
+    battle_log {
+        bigint battle_id PK, FK
+        jsonb turn_log
+    }
+    player {
+        bigint id PK "described in view 1"
+        varchar(50) username UK
+    }
+    deck {
+        bigint id PK "described in view 2"
+        varchar(100) name
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
@@ -147,7 +432,34 @@ CHECK constraints on `battle`:
 
 Every player has a saved list of 5 opponents for each mode (QUICK, RANKED): `opponent_list` is the header with the refresh time, `opponent_list_entry` holds the 5 opponents and, once attacked, the battle played against each of them.
 
-![View 6: list of 5 opponents per mode](diagrams/db-6-matchmaking.png)
+```mermaid
+erDiagram
+    player ||--o{ opponent_list : "keeps"
+    opponent_list ||--o{ opponent_list_entry : "lists (player_id, mode)"
+    player ||--o{ opponent_list_entry : "is offered"
+    battle |o--o| opponent_list_entry : "attacked in"
+    opponent_list {
+        bigint player_id PK, FK
+        varchar(8) mode PK
+        timestamptz generated_at
+        timestamptz last_refresh_at
+    }
+    opponent_list_entry {
+        bigint player_id PK, FK
+        varchar(8) mode PK, FK
+        smallint position PK
+        bigint opponent_id FK
+        int trophies_at_generation
+        bigint battle_id FK, UK
+    }
+    player {
+        bigint id PK "described in view 1"
+        varchar(50) username UK
+    }
+    battle {
+        bigint id PK "described in view 5"
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
@@ -162,7 +474,23 @@ The list is stored server-side because the API is stateless: reloading the page 
 
 A friendship is a row with the player who sent the request and the one who received it. Only online friends can be challenged in FRIEND mode; online presence is not stored in the database, it is tracked in memory by the WebSocket server.
 
-![View 7: friendships](diagrams/db-7-friendships.png)
+```mermaid
+erDiagram
+    player ||--o{ friendship : "sends"
+    player ||--o{ friendship : "receives"
+    friendship {
+        bigint id PK
+        bigint requester_id FK
+        bigint addressee_id FK
+        varchar(10) status
+        timestamptz created_at
+        timestamptz accepted_at
+    }
+    player {
+        bigint id PK "described in view 1"
+        varchar(50) username UK
+    }
+```
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
