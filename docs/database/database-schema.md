@@ -1,12 +1,12 @@
 # Will of the Void – Database schema
 
-The database runs on PostgreSQL 16 and has 24 tables, split into 7 views. Each view shows one area of the game and the relationships between its tables.
+The database runs on PostgreSQL 16 and has 25 tables, split into 7 views. Each view shows one area of the game and the relationships between its tables.
 
 The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. When the schema changes, the diagrams in this file are updated by hand. The same script is the first Flyway migration, `api/src/main/resources/db/migration/V1__init.sql`: once applied it is never edited, and every later change goes into a new `V2__...` migration.
 
 | Area | Tables | Contents |
 | --- | --- | --- |
-| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `player_token`, `credit_transaction`, `notification` | The account and its tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
+| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `player_settings`, `player_token`, `credit_transaction`, `notification` | The account with its settings and tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
 | [2 · Collection and decks](#2--collection-and-decks) | `collection_card`, `memory_archive`, `deck`, `deck_card` | The cards each player owns, the departed Wanderers, and the saved decks with their cards. |
 | [3 · Catalog and packs](#3--catalog-and-packs) | `faction`, `faction_advantage`, `rarity`, `card`, `starter_deck_card`, `pack_type`, `pack_slot`, `pack_opening`, `pack_opening_card` | The card catalog with factions, advantages and rarities, the starter deck, the pack types with their slots, and the history of opened packs. |
 | [4 · Trades](#4--trades) | `trade`, `trade_card` | Trades between two players, with the cards offered and requested. |
@@ -35,10 +35,11 @@ In the relationship tables below, the **Cardinality** column reads from parent t
 
 ## 1 · Player, credits and notifications
 
-Everything starts from `player`: the tokens for email verification, password reset and login refresh are in `player_token`, every change to the credit balance is recorded with its origin in `credit_transaction`, and what happens while the player is offline ends up in `notification`.
+Everything starts from `player`: the accessibility settings synced with the account are in `player_settings`, the tokens for email verification, password reset and login refresh are in `player_token`, every change to the credit balance is recorded with its origin in `credit_transaction`, and what happens while the player is offline ends up in `notification`.
 
 ```mermaid
 erDiagram
+    player ||--o| player_settings : "configures"
     player ||--o{ player_token : "owns"
     player ||--o{ credit_transaction : "records"
     player ||--o{ notification : "receives"
@@ -61,12 +62,20 @@ erDiagram
         int credit_balance
         int trophies
         timestamptz last_daily_bonus_at
+        varchar(64) timezone
         timestamptz protected_until
         varchar(20) invite_code UK
         bigint invited_by_id FK
         int version
         timestamptz created_at
         timestamptz deleted_at
+    }
+    player_settings {
+        bigint player_id PK, FK
+        boolean reduce_motion
+        boolean reduce_transparency
+        boolean show_type_labels
+        timestamptz updated_at
     }
     player_token {
         bigint id PK
@@ -121,6 +130,7 @@ erDiagram
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
+| player → player_settings.player_id | 1 → 0..1 | The player's settings, one row per player: `player_id` is both primary and foreign key. The row is created at registration with the default values, and deleted with the player. |
 | player → player_token.player_id | 1 → 0..N | Email verification, password reset and JWT refresh tokens. Only the SHA-256 hash of the token is stored (`token_hash`, UNIQUE); `used_at` marks a token already used. |
 | player → credit_transaction.player_id | 1 → 0..N | Every credit income or expense is a row. The balance in `player` is the sum of the transactions, updated in the same database transaction. |
 | player → notification.player_id | 1 → 0..N | Notifications shown when the player comes back: attacks received, trade results, departed Wanderers, friend requests. |
@@ -133,13 +143,17 @@ erDiagram
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
 | friendship → notification.friendship_id | 0..1 → 0..N | The friend request received or accepted. ON DELETE CASCADE: when a request is rejected or a friend removed, the row is deleted and so are its notifications. |
 
-Three columns of `player` are not relationships but support game rules: `protected_until` (protection after N attacks received), `last_daily_bonus_at` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
+Four columns of `player` are not relationships but support game rules: `protected_until` (protection after N attacks received), `last_daily_bonus_at` and `timezone` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
 
 **Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UK.
 
 **Credits and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `credit_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET credit_balance = credit_balance - :cost WHERE id = :id AND credit_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
 **`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, REGISTRATION_BONUS and DAILY_BONUS have neither and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
+
+**The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction.
+
+**Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_type_labels` adds text labels next to colour-coded information. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
 In phase 1 credits come from three sources: the registration bonus, the daily login bonus and the invite bonus. They are spent on packs.
 
@@ -535,6 +549,9 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | The cards drawn match the pack slots and their upgrade chances | Opening a pack |
 | Card ownership and no duplication in trades | Accepting a trade, with a pessimistic lock |
 | Wanderers cannot be traded | Proposing and accepting a trade |
+| One daily bonus per day in the player's time zone | Logging in, with an atomic UPDATE on `last_daily_bonus_at` |
+| `player.timezone` is a valid IANA time zone | Registration and profile update (`ZoneId.of`) |
+| Every player has a `player_settings` row | Registration, in the same transaction |
 | Invite bonus only after the invited player's 10th battle | Saving each battle of an invited player |
 | A FRIEND challenge is accepted within 30 seconds, a trade within 48 hours | Accepting, checking `expires_at` server-side |
 | Opponent list refreshed only after the cooldown | Refreshing the list, checking `last_refresh_at` |

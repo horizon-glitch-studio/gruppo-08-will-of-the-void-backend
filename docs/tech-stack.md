@@ -49,4 +49,4 @@ What PostgreSQL offers that the schema actually uses:
 - **Unique index on expressions**: a friendship between A and B cannot exist twice in opposite directions, thanks to an index on `LEAST` and `GREATEST` of the two player ids.
 - **`timestamptz`**: timestamps are stored with their time zone, so deadlines (Wanderers after 7 days, trades after 48 hours, FRIEND challenges after 30 seconds, protection after attacks, the opponent list cooldown) do not depend on the server's time zone.
 
-PostgreSQL is free and as well supported by Spring Boot as MySQL. The switch still has to be agreed with the instructors, since the brief names MySQL.
+PostgreSQL is free and as well supported by Spring Boot as MySQL. The switch from MySQL has been confirmed.
