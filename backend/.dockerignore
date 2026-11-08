@@ -1,0 +1,33 @@
+# --- Git & Sistema ---
+**/.git
+**/.gitignore
+.DS_Store
+Thumbs.db
+
+# --- Environment & Secret Files (FONDAMENTALE) ---
+**/.env
+**/.env.*
+**/secrets*.yaml
+
+# --- IDEs (VS Code, Eclipse, IntelliJ) ---
+**/.vscode
+**/.idea
+**/.classpath
+**/.project
+**/.settings
+**/*.iml
+
+# --- Java / Maven / Node Build Artifacts ---
+**/target/
+**/bin/
+**/obj/
+**/node_modules/
+**/*.log
+
+# --- Docker & Documentazione ---
+**/docker-compose*
+**/compose*
+**/Dockerfile*
+**/.dockerignore
+README.md
+LICENSE
