@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu AS builder
+FROM mcr.microsoft.com/openjdk/jdk:25-ubuntu AS builder
 WORKDIR /backend
 
 COPY mvnw .
@@ -9,7 +9,7 @@ RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:resolve-plugins depend
 COPY src src
 RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
 
-FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu
+FROM mcr.microsoft.com/openjdk/jdk:25-ubuntu
 WORKDIR /backend
 
 COPY --from=builder /backend/target/*.jar app.jar
