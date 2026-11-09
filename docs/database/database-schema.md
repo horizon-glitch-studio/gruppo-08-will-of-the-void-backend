@@ -145,7 +145,7 @@ erDiagram
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
 | friendship → notification.friendship_id | 0..1 → 0..N | The friend request received or accepted. ON DELETE CASCADE: when a request is rejected or a friend removed, the row is deleted and so are its notifications. |
 
-Five columns of `player` are not relationships but support game rules: `protected_until` (protection after N attacks received), `last_daily_bonus_at`, `timezone` and `timezone_changed_at` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
+Five columns of `player` are not relationships but support game rules: `protected_until` (protection after 5 RANKED attacks received in 24 hours, see view 6), `last_daily_bonus_at`, `timezone` and `timezone_changed_at` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
 
 **Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UK.
 
@@ -497,6 +497,17 @@ erDiagram
 
 The list is stored server-side because the API is stateless: reloading the page does not produce a new list, and the server accepts a battle or a request only against an opponent in the list for that mode whose `battle_id` is still empty (and, thanks to `uq_battle_pending_pair`, with no request already pending). If the list is refreshed while a request is pending and the request is accepted later, the battle is played but no entry is linked. Refreshing the list is limited by a cooldown measured from `last_refresh_at`. `trophies_at_generation` is for display only: the trophy calculation after a battle always uses the current values.
 
+**Attack limits and protection.** These rules stop players from farming trophies on the same opponent and from losing many trophies while they are away. They need no extra column: the counts come from the PLAYED rows of `battle` (`challenger_id`, `opponent_id`, `mode`, `played_at`), and the numbers are backend settings that can change without a migration.
+
+| Rule | Value |
+| --- | --- |
+| Attacks on the same opponent in RANKED | At most 1 every 24 hours |
+| Attacks on the same opponent in QUICK | At most 3 every 24 hours |
+| Protection starts after | 5 RANKED attacks received in 24 hours |
+| Protection lasts | 12 hours (`player.protected_until`) |
+
+The limits add to the rule of one battle per opponent per list, which alone could be bypassed by refreshing the list. FRIEND battles are not counted. Only RANKED attacks start the protection, because QUICK battles cost the defender no trophies. While protected, a player does not appear in new opponent lists and cannot be attacked in RANKED. If a protected player starts a RANKED attack, `protected_until` is cleared at once, so nobody can attack others while staying out of reach.
+
 ## 7 · Friendships
 
 A friendship is a row with the player who sent the request and the one who received it. Any friend can be challenged in FRIEND mode, online or not: if they have no valid defense deck, the challenge waits for them as a 48-hour request (see view 5).
@@ -614,6 +625,9 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | A battle is instant only if the opponent's defense deck is VALID; RANKED requires a valid defense deck from both players | Starting a battle |
 | An opponent list entry gets its `battle_id` only when the battle is PLAYED | Playing an instant battle, accepting a request |
 | Opponent list refreshed only after the cooldown | Refreshing the list, checking `last_refresh_at` |
+| The same opponent is attacked at most once a day in RANKED and 3 times a day in QUICK | Starting a battle, counting the PLAYED battles of the last 24 hours |
+| 5 RANKED attacks received in 24 hours give 12 hours of protection; attacking in RANKED ends it | After each RANKED battle, setting or clearing `protected_until` |
+| Protected players are not offered as opponents and cannot be attacked in RANKED | Generating the opponent list, starting a battle |
 | Credits and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
 | Seasons do not overlap, and each one starts when the previous one ends | Creating a season, in the reset job |
 | A season is reset once, after `ends_at` | The reset job, checking that `reset_at` is empty |
