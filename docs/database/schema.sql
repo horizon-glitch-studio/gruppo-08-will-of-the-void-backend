@@ -43,7 +43,7 @@ CREATE TABLE "player_settings" (
   "player_id" bigint PRIMARY KEY,
   "reduce_motion" boolean NOT NULL DEFAULT false,
   "reduce_transparency" boolean NOT NULL DEFAULT false,
-  "show_type_labels" boolean NOT NULL DEFAULT false,
+  "show_text_labels" boolean NOT NULL DEFAULT false,
   "updated_at" timestamptz NOT NULL DEFAULT (now()),
   FOREIGN KEY ("player_id") REFERENCES "player" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE
 );

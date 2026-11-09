@@ -76,7 +76,7 @@ erDiagram
         bigint player_id PK, FK
         boolean reduce_motion
         boolean reduce_transparency
-        boolean show_type_labels
+        boolean show_text_labels
         timestamptz updated_at
     }
     player_token {
@@ -157,7 +157,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **The time zone can change once a month.** Otherwise a player could move their time zone forward to start the next day early and collect an extra bonus. The time zone set at registration does not count as a change; after that, an atomic UPDATE changes it only if `timezone_changed_at` is empty or at least 30 days old, and sets `timezone_changed_at` to now. At most, changing the time zone gives one extra bonus a month.
 
-**Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_type_labels` adds text labels next to colour-coded information. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
+**Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_text_labels` writes faction, rarity and advantages as text next to their colour or icon, for players who do not tell colours apart easily. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
 In phase 1 credits come from three sources: the registration bonus, the daily login bonus and the invite bonus. They are spent on packs.
 
