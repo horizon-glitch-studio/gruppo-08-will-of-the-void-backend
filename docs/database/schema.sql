@@ -17,6 +17,7 @@ CREATE TABLE "player" (
   "trophies" int NOT NULL CHECK (trophies >= 0) DEFAULT 0,
   "last_daily_bonus_at" timestamptz,
   "timezone" varchar(64) NOT NULL DEFAULT 'Europe/Rome',
+  "timezone_changed_at" timestamptz,
   "protected_until" timestamptz,
   "invite_code" varchar(20) UNIQUE NOT NULL,
   "invited_by_id" bigint,
