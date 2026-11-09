@@ -133,12 +133,12 @@ erDiagram
 | player → player_settings.player_id | 1 → 0..1 | The player's settings, one row per player: `player_id` is both primary and foreign key. The row is created at registration with the default values, and deleted with the player. |
 | player → player_token.player_id | 1 → 0..N | Email verification, password reset and JWT refresh tokens. Only the SHA-256 hash of the token is stored (`token_hash`, UNIQUE); `used_at` marks a token already used. |
 | player → credit_transaction.player_id | 1 → 0..N | Every credit income or expense is a row. The balance in `player` is the sum of the transactions, updated in the same database transaction. |
-| player → notification.player_id | 1 → 0..N | Notifications shown when the player comes back: attacks received, trade results, departed Wanderers, friend requests. |
+| player → notification.player_id | 1 → 0..N | Notifications shown when the player comes back: attacks received, challenge requests, trade results, departed Wanderers, friend requests. |
 | deck → player.defense_deck_id | 0..1 → 0..1 | The foreign key lives in `player`. Empty means no defense deck, so the player cannot attack. UNIQUE: a deck defends at most one player. |
 | player → player.invited_by_id | 0..1 → 0..N | A relationship of the table with itself: who invited whom. A player can invite many others; each has at most one inviter. |
 | pack_opening → credit_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
 | player → credit_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, after their 10th battle. |
-| battle → notification.battle_id | 0..1 → 0..N | The battle behind an "attack received" notification. |
+| battle → notification.battle_id | 0..1 → 0..N | The battle behind an "attack received" notification, or the challenge request received, accepted, rejected, expired or cancelled. |
 | trade → notification.trade_id | 0..1 → 0..N | The trade that was received, accepted, rejected, cancelled, expired or failed. |
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
 | friendship → notification.friendship_id | 0..1 → 0..N | The friend request received or accepted. ON DELETE CASCADE: when a request is rejected or a friend removed, the row is deleted and so are its notifications. |
@@ -378,7 +378,9 @@ Because the same copy can be offered to several players, ownership is checked wh
 
 ## 5 · Battles
 
-A single `battle` table serves every mode: FRIEND (a challenge an online friend must accept within 30 seconds), QUICK and RANKED (an attack against an opponent from the list, who defends with their defense deck). The turn-by-turn log is in a separate table, `battle_log`.
+A single `battle` table serves every mode: FRIEND (against a friend), QUICK and RANKED (against an opponent from the list). The turn-by-turn log is in a separate table, `battle_log`.
+
+**Instant battle or request.** If the opponent has an active, VALID defense deck, the battle is played at once against that deck. Otherwise it becomes a request (status PENDING) that the opponent can accept within 48 hours, choosing their deck at that moment; the challenger's deck is the one they had when sending it, saved in `decks_snapshot`. This holds for FRIEND, QUICK and rematches. RANKED is always instant and requires a valid defense deck from both players, so choosing a deck never gives an advantage there. An INVALID defense deck counts as no defense deck: a player who wants to choose their deck every time can simply remove it.
 
 ```mermaid
 erDiagram
@@ -387,6 +389,7 @@ erDiagram
     deck |o--o{ battle : "attack deck"
     deck |o--o{ battle : "opponent deck"
     battle ||--o| battle_log : "logs"
+    battle |o--o{ battle : "rematch of"
     battle {
         bigint id PK
         varchar(8) mode
@@ -405,6 +408,7 @@ erDiagram
         timestamptz created_at
         timestamptz expires_at
         timestamptz played_at
+        bigint rematch_of_id FK
     }
     battle_log {
         bigint battle_id PK, FK
@@ -422,15 +426,16 @@ erDiagram
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
-| player → battle.challenger_id | 1 → 0..N | Who attacks or sends the challenge. |
-| player → battle.opponent_id | 1 → 0..N | The friend who must accept (FRIEND), or the opponent defending with their defense deck (QUICK, RANKED). |
-| deck → battle.challenger_deck_id | 0..1 → 0..N | The attack deck chosen by the challenger. If the deck is deleted the column is emptied, but the battle stays in the history. |
-| deck → battle.opponent_deck_id | 0..1 → 0..N | The opponent's deck: chosen when accepting in FRIEND, the defense deck in QUICK and RANKED. Same behaviour on deletion. |
+| player → battle.challenger_id | 1 → 0..N | Who attacks or sends the request. |
+| player → battle.opponent_id | 1 → 0..N | The player who defends with their defense deck, or who receives the request and accepts it. |
+| deck → battle.challenger_deck_id | 0..1 → 0..N | The attack deck chosen by the challenger. If the deck is deleted the column is emptied, but the battle stays in the history and a pending request still has its copy in `decks_snapshot`. |
+| deck → battle.opponent_deck_id | 0..1 → 0..N | The opponent's deck: their defense deck in an instant battle, the deck chosen when accepting a request. Empty while the request is PENDING. Same behaviour on deletion. |
+| battle → battle.rematch_of_id | 0..1 → 0..N | A relationship of the table with itself: the battle this one is a rematch of. Rematches exist only in FRIEND and QUICK, where no trophies are at stake, so a battle can have any number of rematches. |
 | battle → battle_log.battle_id | 1 → 0..1 | The turn-by-turn log, one row per PLAYED battle. It is a separate table, mapped LAZY, so that the history list does not load every log. Deleting a battle deletes its log. |
 
 **Energy and trophies.** Each player starts a battle with 0 energy. Defeating an opposing card generates energy, and the first player to reach 30 energy wins. `challenger_energy` and `opponent_energy` store the final values. Trophies are the ranking: they are awarded after a RANKED battle, and `challenger_trophies_delta` and `opponent_trophies_delta` store how many each player gained or lost.
 
-A battle keeps everything needed to replay it: the `seed` generated by the server, the copy of both decks (`decks_snapshot`, `jsonb`) and, in `battle_log`, the turn-by-turn log (`turn_log`, `jsonb`). Battles already played stay correct even if a deck or a card changes later.
+A battle keeps everything needed to replay it: the `seed` generated by the server, the copy of both decks (`decks_snapshot`, `jsonb`; a pending request holds only the challenger's deck) and, in `battle_log`, the turn-by-turn log (`turn_log`, `jsonb`). Battles already played stay correct even if a deck or a card changes later.
 
 CHECK constraints on `battle`:
 
@@ -439,19 +444,23 @@ CHECK constraints on `battle`:
 | chk_battle_different_players | Challenger and opponent are different players. |
 | chk_battle_outcome_when_played | `outcome` is set exactly when the status is PLAYED. |
 | chk_battle_trophies_ranked_only | The trophy deltas are set only in RANKED. |
-| chk_battle_expiry_friend_only | `expires_at` is set only in FRIEND. |
-| chk_battle_pending_has_deck | A PENDING challenge already has the challenger's deck. |
+| chk_battle_ranked_instant | A RANKED battle is always PLAYED: it is never a request. |
+| chk_battle_pending_expiry | A PENDING request has `expires_at` (48 hours after it was sent). |
+| chk_battle_has_snapshot | A PENDING or PLAYED battle has `decks_snapshot`, so deleting a deck while a request is waiting does not break it. |
+| chk_battle_rematch_not_ranked | `rematch_of_id` is never set in RANKED. |
+
+The partial unique index `uq_battle_pending_pair` allows at most one PENDING request between the same two players, in either direction. A scheduled job sets requests to EXPIRED after 48 hours.
 
 ## 6 · Matchmaking
 
-Every player has a saved list of 5 opponents for each mode (QUICK, RANKED): `opponent_list` is the header with the refresh time, `opponent_list_entry` holds the 5 opponents and, once attacked, the battle played against each of them.
+Every player has a saved list of 5 opponents for each mode (QUICK, RANKED): `opponent_list` is the header with the refresh time, `opponent_list_entry` holds the 5 opponents and, once a battle has been played, the battle against each of them.
 
 ```mermaid
 erDiagram
     player ||--o{ opponent_list : "keeps"
     opponent_list ||--o{ opponent_list_entry : "lists (player_id, mode)"
     player ||--o{ opponent_list_entry : "is offered"
-    battle |o--o| opponent_list_entry : "attacked in"
+    battle |o--o| opponent_list_entry : "played in"
     opponent_list {
         bigint player_id PK, FK
         varchar(8) mode PK
@@ -480,13 +489,13 @@ erDiagram
 | player → opponent_list.player_id | 1 → 0..N | One list per mode: the primary key is player + mode. It stores when the list was generated and when it was last refreshed. |
 | opponent_list → opponent_list_entry.(player_id, mode) | 1 → 0..5 | Composite foreign key: the entries belong to that list. The primary key includes the position from 1 to 5, so a list cannot have more than 5 entries. |
 | player → opponent_list_entry.opponent_id | 1 → 0..N | The player offered as an opponent, with the trophies they had when the list was generated. A CHECK constraint excludes the player themselves, and `uq_opponent_list_entry_opponent` prevents the same opponent appearing twice in a list. |
-| battle → opponent_list_entry.battle_id | 0..1 → 0..1 | The battle played against that opponent. Empty means not attacked yet. An opponent can be attacked only once per list, so trophies cannot be farmed by attacking the same weak player again and again. UNIQUE: a battle belongs to at most one entry. |
+| battle → opponent_list_entry.battle_id | 0..1 → 0..1 | The battle played against that opponent. It is set only when the battle is PLAYED: at once for an instant battle, on acceptance for a request. Empty means not played yet, so a rejected or expired request leaves the opponent available. An opponent can be played against only once per list, so trophies cannot be farmed by attacking the same weak player again and again. UNIQUE: a battle belongs to at most one entry. |
 
-The list is stored server-side because the API is stateless: reloading the page does not produce a new list, and the server accepts an attack only against an opponent in the list for that mode whose `battle_id` is still empty. Refreshing the list is limited by a cooldown measured from `last_refresh_at`. `trophies_at_generation` is for display only: the trophy calculation after a battle always uses the current values.
+The list is stored server-side because the API is stateless: reloading the page does not produce a new list, and the server accepts a battle or a request only against an opponent in the list for that mode whose `battle_id` is still empty (and, thanks to `uq_battle_pending_pair`, with no request already pending). If the list is refreshed while a request is pending and the request is accepted later, the battle is played but no entry is linked. Refreshing the list is limited by a cooldown measured from `last_refresh_at`. `trophies_at_generation` is for display only: the trophy calculation after a battle always uses the current values.
 
 ## 7 · Friendships
 
-A friendship is a row with the player who sent the request and the one who received it. Only online friends can be challenged in FRIEND mode; online presence is not stored in the database, it is tracked in memory by the WebSocket server.
+A friendship is a row with the player who sent the request and the one who received it. Any friend can be challenged in FRIEND mode, online or not: if they have no valid defense deck, the challenge waits for them as a 48-hour request (see view 5).
 
 ```mermaid
 erDiagram
@@ -524,7 +533,7 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | player.role | USER, ADMIN (Spring Security adds the `ROLE_` prefix) |
 | credit_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, INVITE_BONUS, PACK_PURCHASE |
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
-| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED |
+| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
 | faction_advantage.type | ATTACK, DEFENSE |
 | trade.status | PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED, FAILED |
@@ -553,7 +562,9 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | `player.timezone` is a valid IANA time zone | Registration and profile update (`ZoneId.of`) |
 | Every player has a `player_settings` row | Registration, in the same transaction |
 | Invite bonus only after the invited player's 10th battle | Saving each battle of an invited player |
-| A FRIEND challenge is accepted within 30 seconds, a trade within 48 hours | Accepting, checking `expires_at` server-side |
+| A challenge request and a trade are accepted within 48 hours | Accepting, checking `expires_at` server-side; a job marks them EXPIRED |
+| A battle is instant only if the opponent's defense deck is VALID; RANKED requires a valid defense deck from both players | Starting a battle |
+| An opponent list entry gets its `battle_id` only when the battle is PLAYED | Playing an instant battle, accepting a request |
 | Opponent list refreshed only after the cooldown | Refreshing the list, checking `last_refresh_at` |
 | Credits and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
 | A Wanderer found again extends its stay instead of adding a copy | Opening a pack |
