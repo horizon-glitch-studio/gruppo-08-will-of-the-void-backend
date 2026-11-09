@@ -25,14 +25,14 @@ Each dependency covers a requirement of the brief or a feature the team decided 
 | Dependency | Role | Why |
 | --- | --- | --- |
 | Spring Web | REST controllers, HTTP routes, JSON exchange | The portal talks to the frontend only through a REST API, as the brief requires. Spring Web handles routing, JSON conversion and response codes. |
-| Spring Security + JWT | Stateless authentication, access control, ROLE_USER and ROLE_ADMIN roles | The JWT travels with every request, so the server keeps no sessions: this suits a separate frontend and also authenticates the WebSocket connection. The roles separate players from the backoffice administrators the brief requires. In the database the role is stored as USER or ADMIN; Spring Security adds the `ROLE_` prefix. |
-| Spring Data JPA / Hibernate | Mapping between Java objects and tables | The 22 tables become Java entities. Transactions and pessimistic locks protect trades, where the brief requires that no card is lost or duplicated. |
+| Spring Security + JWT | Stateless authentication, access control, ROLE_USER and ROLE_ADMIN roles | The JWT travels with every request, so the server keeps no sessions: this suits a separate frontend. The roles separate players from the backoffice administrators the brief requires. In the database the role is stored as USER or ADMIN; Spring Security adds the `ROLE_` prefix. |
+| Spring Data JPA / Hibernate | Mapping between Java objects and tables | The 25 tables become Java entities. Transactions and pessimistic locks protect trades, where the brief requires that no card is lost or duplicated. |
 | Spring Validation (Hibernate Validator) | Request validation and server-side constraints | The brief requires the portal to check deck constraints. Server-side validation is the only reliable kind, because client-side validation can be bypassed. |
 | JUnit 5 & AssertJ | Testing the game engine | The brief requires the engine to be isolated and covered by JUnit tests. AssertJ makes assertions read like sentences, which helps when checking long battle logs and edge cases. |
 | Lombok | Less boilerplate | Generates getters, setters, constructors and builders, so entities stay short and readable. The whole team must use it the same way, decided at the start. |
 | Springdoc OpenAPI (Swagger UI) | Interactive API documentation | The library that produces the Swagger documentation required by the brief, compatible with Spring Boot 4.1.2. |
 
-The features the team decided on need two dependencies that are not in this list yet: Spring WebSocket (real-time FRIEND challenges and online friends) and Flyway (versioned schema migrations and initial data).
+The features the team decided on need one dependency that is not in this list yet: Flyway (versioned schema migrations and initial data). There is no WebSocket: challenges that cannot start at once become requests that wait up to 48 hours, and the frontend reads them through the REST API.
 
 ## Database and persistence
 
@@ -47,6 +47,6 @@ What PostgreSQL offers that the schema actually uses:
 
 - **`jsonb`**: the battle log and the deck copies are stored in a binary format that is faster to read and can be queried if needed later.
 - **Unique index on expressions**: a friendship between A and B cannot exist twice in opposite directions, thanks to an index on `LEAST` and `GREATEST` of the two player ids.
-- **`timestamptz`**: timestamps are stored with their time zone, so deadlines (Wanderers after 7 days, trades after 48 hours, FRIEND challenges after 30 seconds, protection after attacks, the opponent list cooldown) do not depend on the server's time zone.
+- **`timestamptz`**: timestamps are stored with their time zone, so deadlines (Wanderers after 7 days, trades after 48 hours, challenge requests after 48 hours, protection after attacks, the opponent list cooldown) do not depend on the server's time zone.
 
 PostgreSQL is free and as well supported by Spring Boot as MySQL. The switch from MySQL has been confirmed.
