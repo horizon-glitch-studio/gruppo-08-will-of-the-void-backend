@@ -64,6 +64,7 @@ erDiagram
         int trophies
         timestamptz last_daily_bonus_at
         varchar(64) timezone
+        timestamptz timezone_changed_at
         timestamptz protected_until
         varchar(20) invite_code UK
         bigint invited_by_id FK
@@ -144,7 +145,7 @@ erDiagram
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
 | friendship → notification.friendship_id | 0..1 → 0..N | The friend request received or accepted. ON DELETE CASCADE: when a request is rejected or a friend removed, the row is deleted and so are its notifications. |
 
-Four columns of `player` are not relationships but support game rules: `protected_until` (protection after N attacks received), `last_daily_bonus_at` and `timezone` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
+Five columns of `player` are not relationships but support game rules: `protected_until` (protection after N attacks received), `last_daily_bonus_at`, `timezone` and `timezone_changed_at` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
 
 **Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UK.
 
@@ -152,7 +153,9 @@ Four columns of `player` are not relationships but support game rules: `protecte
 
 **`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, REGISTRATION_BONUS and DAILY_BONUS have neither and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
 
-**The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction.
+**The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
+
+**The time zone can change once a month.** Otherwise a player could move their time zone forward to start the next day early and collect an extra bonus. The time zone set at registration does not count as a change; after that, an atomic UPDATE changes it only if `timezone_changed_at` is empty or at least 30 days old, and sets `timezone_changed_at` to now. At most, changing the time zone gives one extra bonus a month.
 
 **Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_type_labels` adds text labels next to colour-coded information. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
@@ -604,6 +607,7 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | Wanderers cannot be traded | Proposing and accepting a trade |
 | One daily bonus per day in the player's time zone | Logging in, with an atomic UPDATE on `last_daily_bonus_at` |
 | `player.timezone` is a valid IANA time zone | Registration and profile update (`ZoneId.of`) |
+| The time zone changes at most once every 30 days | Profile update, with an atomic UPDATE on `timezone_changed_at` |
 | Every player has a `player_settings` row | Registration, in the same transaction |
 | Invite bonus only after the invited player's 10th battle | Saving each battle of an invited player |
 | A challenge request and a trade are accepted within 48 hours | Accepting, checking `expires_at` server-side; a job marks them EXPIRED |
