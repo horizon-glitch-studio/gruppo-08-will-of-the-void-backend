@@ -1,33 +1,31 @@
-﻿# Contratto bozza API — indice
+# Draft API Contract — Index
 
-Bozza derivata dal contesto funzionale e dallo schema PostgreSQL in `CONTESTO HORIZON/database/schema.sql`. Non è una descrizione delle rotte attualmente implementate. Le decisioni confermate sono espresse direttamente; i punti ancora aperti sono elencati nelle sezioni finali.
+Draft derived from the functional context and the PostgreSQL schema in `docs/database/schema.sql`. It does not describe routes currently implemented. Confirmed decisions are stated directly; open items are listed in the final sections.
 
-## Convenzioni comuni
+## Common conventions
 
 - Base URL: `/api/v1`.
-- JSON in ingresso e uscita (`application/json`); nomi `camelCase`; date UTC ISO 8601.
-- Rotte che agiscono sul giocatore autenticato usano `Authorization: Bearer <accessToken>`.
-- Gli errori seguono il formato e i codici comuni definiti in [01-auth-profilo.md](01-auth-profilo.md#0-convenzioni); le aree aggiungono i codici specifici descritti nei rispettivi file.
-- Gli ID sono interi (`bigint` nel database); il client li tratta come stringhe se il runtime non rappresenta interi grandi senza perdita.
-- Elenchi paginati: `page` (0-based), `size` (default 20, massimo 100), risposta `{ "items": [], "page": 0, "size": 20, "totalItems": 0, "totalPages": 0 }`.
+- JSON request and response bodies (`application/json`); `camelCase` names; UTC ISO 8601 dates.
+- Routes acting on the authenticated player use `Authorization: Bearer <accessToken>`.
+- Errors follow the common format and codes defined in [01-auth-profile.md](01-auth-profile.md#0-conventions); each area adds the specific codes described in its file.
+- IDs are integers (`bigint` in the database); clients should treat them as strings if their runtime cannot represent large integers without loss.
+- Paginated lists: `page` (0-based), `size` (default 20, maximum 100), response `{ "items": [], "page": 0, "size": 20, "totalItems": 0, "totalPages": 0 }`.
 
-## Contratti per area
+## Contracts by area
 
-1. [Autenticazione e profilo](01-auth-profilo.md)
-2. [Catalogo, collezione e mazzi](02-carte-collezione-mazzi.md)
-3. [Pacchetti e crediti](03-pacchetti-crediti.md)
-4. [Scambi](04-scambi.md)
-5. [Battaglie e matchmaking](05-battaglie-matchmaking.md)
-6. [Amicizie, notifiche e presenza](06-social-notifiche.md)
+1. [Authentication and profile](01-auth-profile.md)
+2. [Cards, collection, and decks](02-cards-collection-decks.md)
+3. [Packs and credits](03-packs-credits.md)
+4. [Trades](04-trades.md)
+5. [Battles and matchmaking](05-battles-matchmaking.md)
+6. [Friendships, notifications, and presence](06-social-notifications.md)
 
-## Decisioni trasversali aperte
+## Cross-cutting open decisions
 
-- Il prefisso `/api/v1` è comune a tutte le aree.
-- Errori applicativi hanno codici stabili e non espongono dettagli interni.
-- Definire formato e limiti di paginazione, ordinamento e filtri.
-- Il rate limiting è rinviato alla fase 2.
-- Decidere quali endpoint richiedono email verificata e quali sono pubblici.
-- Definire l'API amministrativa separatamente: gestione catalogo, rarità, pacchetti e mazzo iniziale non è inclusa in questa bozza giocatore.
-- La presenza online e le sfide in tempo reale richiedono un contratto WebSocket separato; il documento social ne indica gli eventi da concordare.
-
-
+- The `/api/v1` prefix is shared by all areas.
+- Application errors have stable codes and do not expose internal details.
+- Define pagination format and limits, sorting, and filters.
+- Rate limiting is deferred to phase 2.
+- Decide which endpoints require a verified email and which are public.
+- Define the administrative API separately: catalog, rarity, pack, and starter deck management are not included in this player-facing draft.
+- Online presence and real-time challenges require a separate WebSocket contract; the social document lists the events to be agreed.
