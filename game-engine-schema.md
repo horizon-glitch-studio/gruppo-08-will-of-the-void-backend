@@ -83,7 +83,7 @@
                                                             v
                                             /-------------------------------\
                                            /    Has any player reached       \
-                                           \      >= 30 Energy in Match?     /
+                                           \      >= Mode Win Threshold?     /
                                             \-------------------------------/
                                                    /                 \
                                              YES  /                   \ NO
@@ -123,8 +123,6 @@
                                     |               |               |
                                     v               v               v
                               [ WINNER: A ]   [ WINNER: B ]     [ DRAW ]
-                              - EXP: +?       - EXP: +?       - EXP: +?
-                              - Gold: Full    - Gold: Partial - Gold: Half
                                     |               |               |
                                     +---------------+---------------+
                                                     |
@@ -132,7 +130,7 @@
                                   +-----------------------------------+
                                   |        MATCH OVER (CASUAL)        |
                                   | - Retain current Trophies         |
-                                  | - Return Event Log & EXP Summary  |
+                                  | - Return Event Log & Outcome      |
                                   +-----------------------------------+
 
 
@@ -187,7 +185,7 @@
                                                             v
                                             /-------------------------------\
                                            /    Has any player reached       \
-                                           \      >= 30 Energy in Match?     /
+                                           \      >= Mode Win Threshold?     /
                                             \-------------------------------/
                                                    /                 \
                                              YES  /                   \ NO
@@ -225,8 +223,8 @@
                              |                      |                      |
                              v                      v                      v
                        [ WINNER: A ]          [ WINNER: B ]             [ DRAW ]
-                       - Raw Delta A: +?      - Raw Delta A: -?      - Raw Delta A: +?
-                       - Raw Delta B: -?      - Raw Delta B: +?      - Raw Delta B: +?
+                       - Raw Delta A: +?      - Raw Delta A: -?      - Raw Delta A: ±?
+                       - Raw Delta B: -?      - Raw Delta B: +?      - Raw Delta B: ±?
                              |                      |                      |
                              +----------------------+----------------------+
                                                     |
@@ -242,6 +240,11 @@
                                   +-----------------------------------+
                                   |        MATCH OVER (RANKED)        |
                                   | - Save match history to DB        |
-                                  | - Update Leaderboards & Division  |
+                                  | - Update Leaderboard & Orbit      |
                                   | - Return Final Trophies & Actual Δ|
                                   +-----------------------------------+
+
+Notes:
+- Casual matches (Friend, Quick) give no rewards and do not change trophies.
+- Win threshold is set per mode in GameConfig: Ranked 30, Friend 30, Quick 20? (to be tested).
+- Ranked draw: Elo with score 0.5 for both. The player with more trophies loses some, the player with fewer gains some; the delta is 0 only when trophies are equal.
