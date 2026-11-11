@@ -145,7 +145,7 @@ erDiagram
 | player → player_settings.player_id | 1 → 0..1 | The player's settings, one row per player: `player_id` is both primary and foreign key. The row is created at registration with the default values, and deleted with the player. |
 | player → player_token.player_id | 1 → 0..N | Email verification, password reset and JWT refresh tokens. Only the SHA-256 hash of the token is stored (`token_hash`, UNIQUE); `used_at` marks a token already used. |
 | player → credit_transaction.player_id | 1 → 0..N | Every credit income or expense is a row. The balance in `player` is the sum of the transactions, updated in the same database transaction. |
-| player → notification.player_id | 1 → 0..N | Notifications shown when the player comes back: attacks received, challenge requests, trade results, departed Wanderers, friend requests. |
+| player → notification.player_id | 1 → 0..N | Notifications shown when the player comes back: the welcome-back bonus, attacks received, challenge requests, trade results, departed Wanderers, friend requests. |
 | deck → player.defense_deck_id | 0..1 → 0..1 | The foreign key lives in `player`. Empty means no defense deck, so the player cannot attack. UNIQUE: a deck defends at most one player. |
 | player → player.invited_by_id | 0..1 → 0..N | A relationship of the table with itself: who invited whom. A player can invite many others; each has at most one inviter. |
 | pack_opening → credit_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
@@ -161,7 +161,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Credits and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `credit_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET credit_balance = credit_balance - :cost WHERE id = :id AND credit_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
-**`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, REGISTRATION_BONUS and DAILY_BONUS have neither and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
+**`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have neither and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
 
 **The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
 
@@ -171,7 +171,9 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_text_labels` writes faction, rarity and advantages as text next to their colour or icon, for players who do not tell colours apart easily. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
-In phase 1 credits come from three sources: the registration bonus, the daily login bonus and the invite bonus. They are spent on packs.
+**Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `credit_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
+
+In phase 1 credits come from four sources: the registration bonus, the daily login bonus, the comeback bonus and the invite bonus. They are spent on packs.
 
 ## 2 · Collection and decks
 
@@ -601,9 +603,9 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | Column | Allowed values |
 | --- | --- |
 | player.role | USER, ADMIN (Spring Security adds the `ROLE_` prefix) |
-| credit_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, INVITE_BONUS, PACK_PURCHASE |
+| credit_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, INVITE_BONUS, PACK_PURCHASE |
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
-| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
+| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
 | faction_advantage.type | ATTACK, DEFENSE |
 | trade.status | PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED, FAILED |
@@ -628,6 +630,7 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | The cards drawn match the pack slots and their upgrade chances | Opening a pack |
 | Card ownership and no duplication in trades | Accepting a trade, with a pessimistic lock |
 | Wanderers cannot be traded | Proposing and accepting a trade |
+| Comeback bonus only after 7 days of absence and at most once every 30 days | Logging in, before the daily bonus, with the `player` row locked |
 | One daily bonus per day in the player's time zone | Logging in, with an atomic UPDATE on `last_daily_bonus_at` |
 | `player.timezone` is a valid IANA time zone | Registration and profile update (`ZoneId.of`) |
 | The time zone changes at most once every 30 days | Profile update, with an atomic UPDATE on `timezone_changed_at` |
