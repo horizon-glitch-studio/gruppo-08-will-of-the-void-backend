@@ -1,12 +1,12 @@
 # Will of the Void – Database schema
 
-The database runs on PostgreSQL 16 and has 27 tables, split into 8 views. Each view shows one area of the game and the relationships between its tables.
+The database runs on PostgreSQL 16 and has 28 tables, split into 8 views. Each view shows one area of the game and the relationships between its tables.
 
 The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. When the schema changes, the diagrams in this file are updated by hand. The same script is the first Flyway migration, `api/src/main/resources/db/migration/V1__init.sql`: once applied it is never edited, and every later change goes into a new `V2__...` migration.
 
 | Area | Tables | Contents |
 | --- | --- | --- |
-| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `player_settings`, `player_token`, `credit_transaction`, `notification` | The account with its settings and tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
+| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `avatar`, `player_settings`, `player_token`, `credit_transaction`, `notification` | The account with its avatar, settings and tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
 | [2 · Collection and decks](#2--collection-and-decks) | `collection_card`, `memory_archive`, `deck`, `deck_card` | The cards each player owns, the departed Wanderers, and the saved decks with their cards. |
 | [3 · Catalog and packs](#3--catalog-and-packs) | `faction`, `faction_advantage`, `rarity`, `card`, `starter_deck_card`, `pack_type`, `pack_slot`, `pack_opening`, `pack_opening_card` | The card catalog with factions, advantages and rarities, the starter deck, the pack types with their slots, and the history of opened packs. |
 | [4 · Trades](#4--trades) | `trade`, `trade_card` | Trades between two players, with the cards offered and requested. |
@@ -36,10 +36,11 @@ In the relationship tables below, the **Cardinality** column reads from parent t
 
 ## 1 · Player, credits and notifications
 
-Everything starts from `player`: the accessibility settings synced with the account are in `player_settings`, the tokens for email verification, password reset and login refresh are in `player_token`, every change to the credit balance is recorded with its origin in `credit_transaction`, and what happens while the player is offline ends up in `notification`.
+Everything starts from `player`: the avatars a player can choose are in `avatar`, the accessibility settings synced with the account are in `player_settings`, the tokens for email verification, password reset and login refresh are in `player_token`, every change to the credit balance is recorded with its origin in `credit_transaction`, and what happens while the player is offline ends up in `notification`.
 
 ```mermaid
 erDiagram
+    avatar |o--o{ player : "pictures"
     player ||--o| player_settings : "configures"
     player ||--o{ player_token : "owns"
     player ||--o{ credit_transaction : "records"
@@ -59,6 +60,7 @@ erDiagram
         varchar(255) password_hash
         varchar(10) role
         timestamptz email_verified_at
+        smallint avatar_id FK
         bigint defense_deck_id FK, UK
         int credit_balance
         int trophies
@@ -71,6 +73,13 @@ erDiagram
         int version
         timestamptz created_at
         timestamptz deleted_at
+    }
+    avatar {
+        smallint id PK
+        varchar(50) name UK
+        varchar(255) image_url
+        smallint sort_order UK
+        boolean is_active
     }
     player_settings {
         bigint player_id PK, FK
@@ -132,6 +141,7 @@ erDiagram
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
+| avatar → player.avatar_id | 0..1 → 0..N | The avatar chosen by the player. Empty means the default avatar, shown by the frontend. |
 | player → player_settings.player_id | 1 → 0..1 | The player's settings, one row per player: `player_id` is both primary and foreign key. The row is created at registration with the default values, and deleted with the player. |
 | player → player_token.player_id | 1 → 0..N | Email verification, password reset and JWT refresh tokens. Only the SHA-256 hash of the token is stored (`token_hash`, UNIQUE); `used_at` marks a token already used. |
 | player → credit_transaction.player_id | 1 → 0..N | Every credit income or expense is a row. The balance in `player` is the sum of the transactions, updated in the same database transaction. |
@@ -156,6 +166,8 @@ Five columns of `player` are not relationships but support game rules: `protecte
 **The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
 
 **The time zone can change once a month.** Otherwise a player could move their time zone forward to start the next day early and collect an extra bonus. The time zone set at registration does not count as a change; after that, an atomic UPDATE changes it only if `timezone_changed_at` is empty or at least 30 days old, and sets `timezone_changed_at` to now. At most, changing the time zone gives one extra bonus a month.
+
+**Avatars are files, the database keeps the reference.** The images (about ten) are static files of the backend, for example in `api/src/main/resources/static/avatars/`, served by Spring Boot. `avatar.image_url` stores only the relative path, such as `/avatars/03.webp`, so a change of domain does not break it, as for `card.image_url`. The frontend reads the active avatars, ordered by `sort_order`, from the API. An avatar is never deleted: `is_active = false` hides it from the choice, and players who already use it keep it. New avatars, for example for an event, are new rows added with a Flyway migration.
 
 **Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_text_labels` writes faction, rarity and advantages as text next to their colour or icon, for players who do not tell colours apart easily. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
@@ -620,6 +632,7 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | `player.timezone` is a valid IANA time zone | Registration and profile update (`ZoneId.of`) |
 | The time zone changes at most once every 30 days | Profile update, with an atomic UPDATE on `timezone_changed_at` |
 | Every player has a `player_settings` row | Registration, in the same transaction |
+| A player can choose only an active avatar | Profile update, checking `avatar.is_active` |
 | Invite bonus only after the invited player's 10th battle | Saving each battle of an invited player |
 | A challenge request and a trade are accepted within 48 hours | Accepting, checking `expires_at` server-side; a job marks them EXPIRED |
 | A battle is instant only if the opponent's defense deck is VALID; RANKED requires a valid defense deck from both players | Starting a battle |
