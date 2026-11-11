@@ -19,13 +19,3 @@ Draft derived from the functional context and the PostgreSQL schema in `docs/dat
 4. [Trades](04-trades.md)
 5. [Battles and matchmaking](05-battles-matchmaking.md)
 6. [Friendships, notifications, and presence](06-social-notifications.md)
-
-## Cross-cutting open decisions
-
-- The `/api/v1` prefix is shared by all areas.
-- Application errors have stable codes and do not expose internal details.
-- Define pagination format and limits, sorting, and filters.
-- Rate limiting is deferred to phase 2.
-- Decide which endpoints require a verified email and which are public.
-- Define the administrative API separately: catalog, rarity, pack, and starter deck management are not included in this player-facing draft.
-- Online presence and real-time challenges require a separate WebSocket contract; the social document lists the events to be agreed.
