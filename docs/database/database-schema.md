@@ -13,7 +13,7 @@ The schema source is [`schema.sql`](schema.sql): every table declares its own fo
 | [5 · Battles](#5--battles) | `battle`, `battle_log` | Battles in every mode (FRIEND, QUICK, RANKED) with result, energy and trophies, and the turn-by-turn log kept apart. |
 | [6 · Matchmaking](#6--matchmaking) | `opponent_list`, `opponent_list_entry` | The saved list of 5 opponents per mode, and the battle played against each of them. |
 | [7 · Friendships](#7--friendships) | `friendship` | Friend requests and accepted friendships. |
-| [8 · Seasons](#8--seasons) | `season`, `season_result` | The 4-week ranked seasons and, for each player, the trophies before and after the end-of-season reset with their final rank. |
+| [8 · Seasons](#8--seasons) | `season`, `season_result` | The 4-week ranked seasons and, for each player, the trophies before and after the end-of-season reset with their final rank. The end-of-season credit reward is a row of `credit_transaction` (view 1). |
 
 ## How to read the diagrams
 
@@ -49,6 +49,7 @@ erDiagram
     player |o--o{ player : "invited"
     pack_opening |o--o| credit_transaction : "payment"
     player |o--o| credit_transaction : "invite bonus"
+    season |o--o{ credit_transaction : "season reward"
     battle |o--o{ notification : "attack"
     trade |o--o{ notification : "trade result"
     card |o--o{ notification : "Wanderer left"
@@ -104,6 +105,7 @@ erDiagram
         varchar(30) reason
         bigint pack_opening_id FK, UK
         bigint invited_player_id FK, UK
+        int season_id FK
         timestamptz created_at
     }
     notification {
@@ -137,6 +139,9 @@ erDiagram
     friendship {
         bigint id PK "described in view 7"
     }
+    season {
+        int id PK "described in view 8"
+    }
 ```
 
 | Relationship | Cardinality | Meaning |
@@ -149,6 +154,7 @@ erDiagram
 | deck → player.defense_deck_id | 0..1 → 0..1 | The foreign key lives in `player`. Empty means no defense deck, so the player cannot attack. UNIQUE: a deck defends at most one player. |
 | player → player.invited_by_id | 0..1 → 0..N | A relationship of the table with itself: who invited whom. A player can invite many others; each has at most one inviter. |
 | pack_opening → credit_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
+| season → credit_transaction.season_id | 0..1 → 0..N | The season a SEASON_REWARD belongs to. The partial unique index `uq_credit_season_reward` on player + season gives each player at most one reward per season. |
 | player → credit_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, after their 10th battle. |
 | battle → notification.battle_id | 0..1 → 0..N | The battle behind an "attack received" notification, or the challenge request received, accepted, rejected, expired or cancelled. |
 | trade → notification.trade_id | 0..1 → 0..N | The trade that was received, accepted, rejected, cancelled, expired or failed. |
@@ -161,7 +167,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Credits and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `credit_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET credit_balance = credit_balance - :cost WHERE id = :id AND credit_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
-**`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have neither and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
+**`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have none of the three and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
 
 **The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
 
@@ -173,7 +179,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `credit_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
 
-In phase 1 credits come from four sources: the registration bonus, the daily login bonus, the comeback bonus and the invite bonus. They are spent on packs.
+In phase 1 credits come from five sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus and the season reward. They are spent on packs.
 
 ## 2 · Collection and decks
 
@@ -509,7 +515,7 @@ erDiagram
 | player → opponent_list_entry.opponent_id | 1 → 0..N | The player offered as an opponent, with the trophies they had when the list was generated. A CHECK constraint excludes the player themselves, and `uq_opponent_list_entry_opponent` prevents the same opponent appearing twice in a list. |
 | battle → opponent_list_entry.battle_id | 0..1 → 0..1 | The battle played against that opponent. It is set only when the battle is PLAYED: at once for an instant battle, on acceptance for a request. Empty means not played yet, so a rejected or expired request leaves the opponent available. An opponent can be played against only once per list, so trophies cannot be farmed by attacking the same weak player again and again. UNIQUE: a battle belongs to at most one entry. |
 
-The list is stored server-side because the API is stateless: reloading the page does not produce a new list, and the server accepts a battle or a request only against an opponent in the list for that mode whose `battle_id` is still empty (and, thanks to `uq_battle_pending_pair`, with no request already pending). If the list is refreshed while a request is pending and the request is accepted later, the battle is played but no entry is linked. Refreshing the list is limited by a cooldown measured from `last_refresh_at`. `trophies_at_generation` is for display only: the trophy calculation after a battle always uses the current values.
+The list is stored server-side because the API is stateless: reloading the page does not produce a new list, and the server accepts a battle or a request only against an opponent in the list for that mode whose `battle_id` is still empty (and, thanks to `uq_battle_pending_pair`, with no request already pending). If the list is refreshed while a request is pending and the request is accepted later, the battle is played but no entry is linked. Refreshing the list is limited by a 5-second cooldown measured from `last_refresh_at`, which only stops repeated clicks: the real limit on attacks is the per-opponent rule below, which a refresh cannot bypass. `trophies_at_generation` is for display only: the trophy calculation after a battle always uses the current values.
 
 **Attack limits and protection.** These rules stop players from farming trophies on the same opponent and from losing many trophies while they are away. They need no extra column: the counts come from the PLAYED rows of `battle` (`challenger_id`, `opponent_id`, `mode`, `played_at`), and the numbers are backend settings that can change without a migration.
 
@@ -590,7 +596,19 @@ erDiagram
 
 1. It writes a `season_result` row for every player who has not been deleted, with the current trophies, the trophies after the reset and the rank (`rank() OVER (ORDER BY trophies DESC)`).
 2. It lowers `player.trophies` with an atomic UPDATE that subtracts the reduction (`trophies_before - trophies_after`) instead of writing the new value (never going below 0), so a battle finished at the same instant is not lost.
-3. It sets `season.reset_at`, so the same season is never reset twice, and creates the next season.
+3. It gives every player the season reward: a SEASON_REWARD row in `credit_transaction` with the season's `season_id`, the credits added to `credit_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect credits.
+4. It sets `season.reset_at`, so the same season is never reset twice, and creates the next season.
+
+**Season reward.** The reward depends on the trophies at the end of the season, before the reset (`season_result.trophies_before`), and is a multiple of the daily bonus, so it stays in proportion when the credit amounts are tuned:
+
+| Trophies at season end | Reward |
+| --- | --- |
+| 0 – 199 | 1 × daily bonus |
+| 200 – 499 | 3 × daily bonus |
+| 500 – 999 | 6 × daily bonus |
+| 1000 and more | 10 × daily bonus |
+
+The tiers are backend settings. Because everything happens in the same transaction as the reset, results and rewards always match, and `uq_credit_season_reward` makes a second run of the job fail instead of paying twice.
 
 The three numbers (K = 32, 4 weeks, threshold 1000) are backend settings, not database values, so they can be changed without a migration. With K = 32, an even battle moves 16 trophies, so the threshold is reached after several seasons of steady winning: the reset only concerns the best players.
 
@@ -603,9 +621,9 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | Column | Allowed values |
 | --- | --- |
 | player.role | USER, ADMIN (Spring Security adds the `ROLE_` prefix) |
-| credit_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, INVITE_BONUS, PACK_PURCHASE |
+| credit_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, SEASON_REWARD, INVITE_BONUS, PACK_PURCHASE |
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
-| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
+| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
 | faction_advantage.type | ATTACK, DEFENSE |
 | trade.status | PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED, FAILED |
@@ -640,13 +658,14 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | A challenge request and a trade are accepted within 48 hours | Accepting, checking `expires_at` server-side; a job marks them EXPIRED |
 | A battle is instant only if the opponent's defense deck is VALID; RANKED requires a valid defense deck from both players | Starting a battle |
 | An opponent list entry gets its `battle_id` only when the battle is PLAYED | Playing an instant battle, accepting a request |
-| Opponent list refreshed only after the cooldown | Refreshing the list, checking `last_refresh_at` |
+| Opponent list refreshed only after the 5-second cooldown | Refreshing the list, checking `last_refresh_at` |
 | The same opponent is attacked at most once a day in RANKED and 3 times a day in QUICK | Starting a battle, counting the PLAYED battles of the last 24 hours |
 | 5 RANKED attacks received in 24 hours give 12 hours of protection; attacking in RANKED ends it | After each RANKED battle, setting or clearing `protected_until` |
 | Protected players are not offered as opponents and cannot be attacked in RANKED | Generating the opponent list, starting a battle |
 | Credits and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
 | Seasons do not overlap, and each one starts when the previous one ends | Creating a season, in the reset job |
 | A season is reset once, after `ends_at` | The reset job, checking that `reset_at` is empty |
+| The season reward matches the trophy tier at season end | The reset job, from `season_result.trophies_before` |
 | A Wanderer found again extends its stay instead of adding a copy | Opening a pack |
 | Only event packs (with a purchase window) have a slot that upgrades to Wanderer | Creating and editing a pack type in the backoffice |
 | An event pack is sold only between `available_from` and `available_until` | Buying a pack, checking the time server-side |
