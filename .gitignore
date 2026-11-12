@@ -1,1 +1,30 @@
+# --- Maven / Compilazione (FONDAMENTALE) ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### VS Code ###
+.vscode/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+.log
+
+# --- System Files ---
 .DS_Store
+Thumbs.db
+
+# Agents
+.clinerules/
+AGENTS.md
+CLAUDE.md

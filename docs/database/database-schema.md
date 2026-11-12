@@ -2,7 +2,7 @@
 
 The database runs on PostgreSQL 16 and has 28 tables, split into 8 views. Each view shows one area of the game and the relationships between its tables.
 
-The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. When the schema changes, the diagrams in this file are updated by hand. The same script is the first Flyway migration, `api/src/main/resources/db/migration/V1__init.sql`: once applied it is never edited, and every later change goes into a new `V2__...` migration.
+The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. The initial Flyway migration is [`db/V1__init.sql`](../../db/V1__init.sql) in the repository root; it is applied from the filesystem (`spring.flyway.locations=filesystem:db`). Once applied, do not edit it: every later change goes into a new `db/V2__...sql` migration.
 
 | Area | Tables | Contents |
 | --- | --- | --- |

@@ -1,0 +1,19 @@
+# Normalizzazione predefinita per i file di testo (LF per Linux/macOS e Docker)
+* text=auto eol=lf
+
+# Wrapper di Maven (garantisce il funzionamento corretto su ogni sistema operativo)
+/mvnw text eol=lf
+*.cmd text eol=crlf
+
+# Trattamento dei file binari (evita corruzioni o diff inutili)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+
+# Esclusione di file di configurazione interna dagli ZIP di release
+.gitignore export-ignore
+.dockerignore export-ignore
+.gitattributes export-ignore
