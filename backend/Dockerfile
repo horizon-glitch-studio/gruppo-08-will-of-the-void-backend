@@ -2,11 +2,11 @@ FROM mcr.microsoft.com/openjdk/jdk:25-ubuntu AS builder
 WORKDIR /backend
 
 COPY mvnw .
-COPY .mvn .mvn
+COPY backend/.mvn .mvn
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:resolve-plugins dependency:resolve
 
-COPY src src
+COPY backend/src src
 RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
 
 FROM mcr.microsoft.com/openjdk/jdk:25-ubuntu
