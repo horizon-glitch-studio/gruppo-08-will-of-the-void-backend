@@ -19,11 +19,11 @@ class WillofthevoidApplicationTests {
 	}
 
 	@Test
-	void appliesInitialFlywayMigration() {
-		var current = flyway.info().current();
+	void appliesAllFlywayMigrations() {
+		var info = flyway.info();
 
-		assertNotNull(current, "Flyway should apply the initial database migration");
-		assertEquals("1", current.getVersion().getVersion());
+		assertNotNull(info.current(), "Flyway should apply at least the initial database migration");
+		assertEquals(0, info.pending().length, "All Flyway migrations should be applied without pending scripts");
 	}
 
 }
