@@ -6,7 +6,7 @@ COPY backend/.mvn .mvn
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:resolve-plugins dependency:resolve
 
-COPY backend/src src
+COPY backend/src backend/src
 RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
 
 FROM mcr.microsoft.com/openjdk/jdk:25-ubuntu

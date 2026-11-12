@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: wotv
+          POSTGRES_USER: wotv_user
+          POSTGRES_PASSWORD: wotv_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wotv_user -d wotv"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/wotv
+      SPRING_DATASOURCE_USERNAME: wotv_user
+      SPRING_DATASOURCE_PASSWORD: wotv_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Run tests
+        run: mvn --batch-mode --no-transfer-progress test
