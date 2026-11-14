@@ -36,28 +36,25 @@ Reference: [02-cards-collection-decks.md](02-cards-collection-decks.md)
 
 Reference: [03-packs-credits.md](03-packs-credits.md)
 
-- [ ] **Odds:** Decide whether pack odds are exposed to players and how rarity upgrades are represented.
+- [x] **Odds:** Decide whether pack odds are exposed to players and how rarity upgrades are represented.
 
-      proposal: leave it for phase 2 if needed otherwise: show the odds by rarity for packs, including odds after upgrades (e.g. making sure a Legendary card gets pulled every 50 packs), without exposing slot configuration or random seeds.
-      example (brawl stars chest): https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIExO1rGXbW8Tbd3w4YI6tnsFGnQKXYiITJtRnkCLC49FHObpyORiJdpM&s=10
-      
+      proposal: show the odds of every slot and the guarantees (Champion or higher within 10 packs, Elect within 50 standard packs, Wanderer within 50 event packs).
 - [ ] **Pack offering:** Define pack purchase limits.
 
       proposal: always available
 - [ ] **History:** Define sorting and retention period of both battle and transactions for bought in game content like packs and credits.
 
       proposal: sort newest first; retain opening and transaction history for the lifetime of the account, unless different retention requirements apply.
-- [ ] **Daily bonus:** The bonus is granted at login. Decide whether to also provide an endpoint for claiming it manually.
+- [x] **Daily bonus:** The bonus is granted at login. Decide whether to also provide an endpoint for claiming it manually.
 
-      proposal: grant the bonus at login with a dedicated page so the user has to redeem it.
-      example: https://imgur.com/a/f0tI8a7
+      proposal: the bonus is granted automatically at the first login of the day, no manual claim.
 
 ## Trades
 
 
-- [ ] **Card ownership:** The project context specifies checking ownership when the trade is accepted. Confirm whether to keep that behavior or require ownership when proposing the trade.
+- [x] **Card ownership:** The project context specifies checking ownership when the trade is accepted. Confirm whether to keep that behavior or require ownership when proposing the trade.
 
-      proposal: check ownership both when proposing and when the trade is accepted and lock quantities during the transfer; if they are no longer available, close the trade as `FAILED` without partial transfers.
+      proposal: check ownership only when the trade is accepted; the same copy can be offered in several pending trades; if the cards are no longer available, close the trade as `FAILED` without partial transfers.
 - [ ] **recipient:** Define how a nonexistent recipient username is handled.
 
       proposal: normalize usernames case-insensitively and return `PLAYER_NOT_FOUND` for nonexistent recipients.
@@ -67,19 +64,24 @@ Reference: [03-packs-credits.md](03-packs-credits.md)
 
 ## Battles and matchmaking
 
+- [ ] **Rematch:** Define the route for a rematch after a FRIEND or QUICK battle; RANKED has no rematch.
 
-- [ ] **Matchmaking:** Define the trophy range and the algorithm for selecting and refreshing the opponent list, including its cooldown.
-
-      proposal: suggest 5 opponents within ±50 trophies, widening the range if needed; exclude the player and opponents already faced from the current list. Keep the list until it is refreshed and apply a 60-second cooldown.
-- [ ] **Ranking:** Define the duration/rules for protection (`protectedUntil`).
-
-      proposal:  provide protection for 6 hours after a loss.
-- [ ] **Gameplay actions:** Define the action schema, server authority, reconnection behavior, and idempotency.
-
-      proposal: make the server authoritative for turns, legal moves, and outcomes; identify each action with a UUID and turn number, return the original result on retry, and allow state recovery after reconnection.
+      proposal: `POST /battles/{battleId}/rematch` with body `{ "deckId": 12 }`, available to either participant any number of times. It creates a new battle with the same mode and opponent, linked through `rematch_of_id`: instant against a valid defense deck, otherwise a challenge.
 - [ ] **Replays:** Define who can access them, how long they are retained, and when logs become visible.
 
-      proposal: make replays available only to participants after the match ends and retain them for 90 days; should be visible in a dedicated tab as the ongoing match is playing out (look at Duel Logs on the right for reference -> https://imgur.com/a/OPrvN7k), also not mandatory so it could go for phase 2 if needed.
+      proposal: replays are available only to participants after the match ends; retain them for 90 days.
+- [ ] **Leaderboard and seasons:** Define the routes for the leaderboard (global and per orbit, listing only players with at least one RANKED battle in the current season) and for the current season.
+
+      proposal: `GET /leaderboard` (paginated, optional `orbit` filter) and `GET /seasons/current` (start and end dates).
+- [x] **Matchmaking:** Define the trophy range and the algorithm for selecting and refreshing the opponent list, including its cooldown.
+
+      proposal: 5 opponents within a trophy range set by the player's orbit (0–199 ±200, 200–499 ±150, 500–999 ±100, 1000+ ±50), doubled until the list is full; QUICK lists random players active in the last 7 days; refresh at most every 5 seconds.
+- [x] **Ranking:** Define the duration/rules for protection (`protectedUntil`).
+
+      proposal: shield: 5 RANKED attacks received in 24 hours give 12 hours of protection; it ends at once if the player attacks in RANKED.
+- [x] **Gameplay actions:** Define the action schema, server authority, reconnection behavior, and idempotency.
+
+      proposal: no actions: the server simulates the whole match at once.
 - [x] **Real-time transport:** Choose WebSocket/STOMP or an alternative, and define events and payloads.
 
       proposal: no websockets at all
@@ -95,7 +97,7 @@ Reference: [03-packs-credits.md](03-packs-credits.md)
       proposal: show presence only to accepted friends; send a heartbeat every 30 seconds and mark the player offline after 90 seconds without one.
 - [ ] **Notifications:** Define retention, sorting, limits, and which events are pushed as well as persisted.
 
-      proposal (from codex): use the common pagination and newest-first sorting; retain notifications for 90 days, with a maximum of 500 per user, deleting the oldest read notifications first. Persist events and send them in real time when the recipient is online.
+      proposal (from codex): use the common pagination and newest-first sorting; retain notifications for 90 days, with a maximum of 500 per user, deleting the oldest read notifications first. Persist events; instead of real-time delivery, the client polls `GET /users/me/notifications/unread-count` at a fixed interval (for example every 30 seconds) and while the app is open.
 - [ ] **Removing a relationship:** Define how `DELETE /friends/{friendshipId}` works for accepted friendships and outgoing requests; incoming requests are rejected through the dedicated endpoint.
 
       proposal: use dedicated separated endpoints for rejecting new requests and removing already existing friends
