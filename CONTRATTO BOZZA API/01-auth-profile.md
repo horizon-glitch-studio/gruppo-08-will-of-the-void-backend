@@ -149,11 +149,15 @@ Request:
   "dailyBonus": {
     "granted": true,
     "amount": 10
+  },
+  "comebackBonus": {
+    "granted": false,
+    "amount": 0
   }
 }
 ```
 
-`expiresIn` is in seconds. If the bonus was already claimed today: `"dailyBonus": { "granted": false, "amount": 0 }`. Numeric values in the example are illustrative.
+`expiresIn` is in seconds. If the bonus was already claimed today: `"dailyBonus": { "granted": false, "amount": 0 }`. `comebackBonus` is granted on top of the daily bonus at the first login after at least 7 days without playing, at most once every 30 days; otherwise `{ "granted": false, "amount": 0 }`. Numeric values in the example are illustrative.
 
 Errors: 400 `VALIDATION_FAILED`, 401 `INVALID_CREDENTIALS`. Attempt limits and the corresponding 429 response are deferred to phase 2.
 
@@ -266,7 +270,7 @@ Request:
   "avatar": "avatar_07",
   "creditBalance": 120,
   "trophies": 340,
-  "league": "ORBIT_3",
+  "league": "ORBIT_2",
   "defenseDeckId": 12,
   "protectedUntil": null,
   "timezone": "Europe/Rome",
@@ -285,8 +289,8 @@ Request:
 
 Field notes:
 
-- `avatar`: key for a preset avatar (image uploads are not supported). The field **does not yet exist in the DB** and must be added with a V2 migration.
-- `league`: calculated from trophies, not stored. Orbit thresholds and names are to be defined with Marco. The example is illustrative.
+- `avatar`: key for a preset avatar (image uploads are not supported), stored as `player.avatar_id`.
+- `league`: calculated from trophies, not stored. Thresholds: 0–199, 200–499, 500–999, 1000 and more; names are `[TBD]`.
 - `defenseDeckId`: `null` if the player has no defensive deck. The frontend must also check whether the deck is valid (see the deck contract).
 - `protectedUntil`: `null` if the player is not protected.
 - `stats`: derived from the `battle` table (only matches with status `PLAYED`). `winRate` = `wins / matchesPlayed * 100`, rounded to one decimal place, or `0` if the player has not played. Draws count as matches played, not wins.
@@ -310,7 +314,7 @@ Request (all fields are optional; send only the fields to change):
 ```
 
 **200 OK** response: same object as `GET /users/me`.
-Errors: 400 `VALIDATION_FAILED` (unknown avatar or invalid time zone), 401 `TOKEN_INVALID`.
+Errors: 400 `VALIDATION_FAILED` (unknown avatar or invalid time zone), 401 `TOKEN_INVALID`, 409 `TIMEZONE_CHANGE_TOO_SOON` (time zone changed less than 30 days ago).
 Username and email **cannot** be changed in v1.
 
 ### 2.3 Accessibility settings
@@ -381,7 +385,7 @@ Request:
   "username": "star_hunter",
   "avatar": "avatar_03",
   "trophies": 520,
-  "league": "ORBIT_4",
+  "league": "ORBIT_3",
   "stats": {
     "matchesPlayed": 80,
     "wins": 50,
@@ -398,7 +402,5 @@ Errors: 404 `PLAYER_NOT_FOUND`.
 
 ## 3. Open items
 
-- **Email verification:** Login is allowed before verification. Define which features remain unavailable until verification (for example, Ranked or pack purchases).
-- **Avatar:** The preset avatar set is confirmed; the `avatar` field is still missing from the current schema and requires a migration.
-- **Leagues:** Names and thresholds remain to be defined; the league is calculated from trophies.
+- **Leagues:** Orbit names remain to be defined; thresholds are set by the rules and the league is calculated from trophies.
 - **Rate limiting:** Thresholds and implementation are deferred to phase 2. Do not promise `429 TOO_MANY_REQUESTS` on authentication routes in v1.

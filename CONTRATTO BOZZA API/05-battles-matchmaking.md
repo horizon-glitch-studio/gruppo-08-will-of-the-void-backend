@@ -10,37 +10,34 @@ Prefix: `/api/v1`. Based on `battle`, `battle_log`, `opponent_list`, and `oppone
 | POST | `/matchmaking/opponents/refresh` | yes | regenerates the list if cooldown allows |
 | POST | `/matchmaking/opponents/{opponentId}/battle` | yes | starts QUICK or RANKED against an opponent not yet attacked |
 
-The start request body specifies `mode` and `deckId`. The list is persisted: refreshing the page does not change it; an opponent on the list can be attacked only once. `trophiesAtGeneration` is informational; resolution uses current trophy counts. RANKED updates trophies according to the Elo rule still to be defined; QUICK awards no trophies.
+The start request body specifies `mode` and `deckId`. The list is persisted: refreshing the page does not change it; an opponent on the list can be attacked only once. In QUICK, if the opponent has no valid defense deck, the battle becomes a challenge (`PENDING`, as for FRIEND); RANKED is always instant. Opponent search, refresh, attack limits and shield follow the rules. `trophiesAtGeneration` is informational; resolution uses current trophy counts. RANKED updates trophies with the Elo rule; QUICK awards no trophies.
 
 ## FRIEND challenges
 
 | Method | Route | Auth | Result |
 |---|---|---|---|
-| POST | `/battles/friend` | yes | sends a challenge to an online friend, 201 `PENDING` |
+| POST | `/battles/friend` | yes | battle against a friend |
 | GET | `/battles/{battleId}` | yes | status/details for either party |
-| POST | `/battles/{battleId}/accept` | yes | accepts and selects a defensive deck |
+| POST | `/battles/{battleId}/accept` | yes | accepts choosing one of the player's decks |
 | POST | `/battles/{battleId}/reject` | yes | rejects |
 | POST | `/battles/{battleId}/cancel` | yes | challenger cancels before acceptance |
 
-Proposed challenge body: `{ "opponentUsername": "star_hunter", "deckId": 12 }`. The challenge expires after 30 seconds according to the context; decide whether acceptance and match start happen over REST or WebSocket.
+`POST /battles/friend` plays the battle at once if the friend has a valid defense deck (201 `PLAYED`); otherwise it creates a challenge (201 `PENDING`).
+
+Proposed challenge body: `{ "opponentUsername": "star_hunter", "deckId": 12 }`. The challenger's deck is saved as it is when the challenge is sent. A challenge expires 48 hours after it is sent and the challenger can cancel it before then; between two players there can be at most one pending challenge.
 
 ## Match, results, and history
 
 | Method | Route | Auth | Result |
 |---|---|---|---|
-| POST | `/battles/{battleId}/actions` | yes | submits a game action; `BattleActionRequest` schema to be defined |
 | GET | `/battles/{battleId}/result` | yes | final result and energy/trophy deltas |
 | GET | `/users/me/battles` | yes | paginated history; proposed filters: `mode`, `outcome`, dates |
 | GET | `/battles/{battleId}/replay` | yes | deck snapshots and turn log, if authorized |
 
-The client does not send the seed, outcome, final energy, or trophy deltas: these are authoritative on the server. A match starts at zero energy; the win condition is reaching 30. For RANKED matches, the persisted result contains both players' deltas. Turn and action structure depends on the game engine and must be agreed before freezing the contract.
+The client does not send the seed, outcome, final energy, or trophy deltas: these are authoritative on the server, which simulates the whole match at once. A match starts at zero energy; the win threshold depends on the mode: 30 in RANKED and FRIEND, 20 in QUICK. For RANKED matches, the persisted result contains both players' deltas. Both participants can watch the replay.
 
-Proposed specific errors: `BATTLE_NOT_FOUND` 404, `BATTLE_FORBIDDEN` 403, `BATTLE_NOT_PENDING` 409, `BATTLE_EXPIRED` 409, `OPPONENT_NOT_IN_LIST` 409, `OPPONENT_ALREADY_ATTACKED` 409, `MATCHMAKING_COOLDOWN` 429, `DECK_INVALID` 422, `OPPONENT_NOT_ONLINE` 409, `INVALID_BATTLE_ACTION` 400.
+Proposed specific errors: `BATTLE_NOT_FOUND` 404, `BATTLE_FORBIDDEN` 403, `BATTLE_NOT_PENDING` 409, `BATTLE_EXPIRED` 409, `OPPONENT_NOT_IN_LIST` 409, `OPPONENT_ALREADY_ATTACKED` 409, `MATCHMAKING_COOLDOWN` 429, `DECK_INVALID` 422.
 
 ## To decide
 
-- Matchmaking trophy range and opponent selection/refresh/cooldown algorithm.
-- Elo rules, draws, and temporary protection (`protectedUntil`).
-- Action format, server authority, reconnection, and idempotency.
-- Replay access and retention; log visibility during a match.
-- Real-time transport: WebSocket/STOMP or an alternative, and related events.
+- Replay retention.
