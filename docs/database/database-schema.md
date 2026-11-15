@@ -13,7 +13,7 @@ The schema source is [`schema.sql`](schema.sql): every table declares its own fo
 | [5 · Battles](#5--battles) | `battle`, `battle_log` | Battles in every mode (FRIEND, QUICK, RANKED) with result, energy and trophies, and the turn-by-turn log kept apart. |
 | [6 · Matchmaking](#6--matchmaking) | `opponent_list`, `opponent_list_entry` | The saved list of 5 opponents per mode, and the battle played against each of them. |
 | [7 · Friendships](#7--friendships) | `friendship` | Friend requests and accepted friendships. |
-| [8 · Seasons](#8--seasons) | `season`, `season_result` | The 4-week ranked seasons and, for each player, the trophies before and after the end-of-season reset with their final rank. The end-of-season Shard reward is a row of `shard_transaction` (view 1). |
+| [8 · Seasons](#8--seasons) | `season`, `season_result` | The 4-week ranked seasons and, for each player, the trophies before and after the end-of-season reset with their final rank. The end-of-season reward and the Orbit rewards are rows of `shard_transaction` (view 1). |
 
 ## How to read the diagrams
 
@@ -49,7 +49,7 @@ erDiagram
     player |o--o{ player : "invited"
     pack_opening |o--o| shard_transaction : "payment"
     player |o--o| shard_transaction : "invite bonus"
-    season |o--o{ shard_transaction : "season reward"
+    season |o--o{ shard_transaction : "season or orbit reward"
     battle |o--o{ notification : "attack"
     trade |o--o{ notification : "trade result"
     card |o--o{ notification : "Wanderer left"
@@ -106,6 +106,7 @@ erDiagram
         bigint pack_opening_id FK, UK
         bigint invited_player_id FK, UK
         int season_id FK
+        smallint orbit
         timestamptz created_at
     }
     notification {
@@ -154,7 +155,7 @@ erDiagram
 | deck → player.defense_deck_id | 0..1 → 0..1 | The foreign key lives in `player`. Empty means no defense deck, so the player cannot attack. UNIQUE: a deck defends at most one player. |
 | player → player.invited_by_id | 0..1 → 0..N | A relationship of the table with itself: who invited whom. A player can invite many others; each has at most one inviter. |
 | pack_opening → shard_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
-| season → shard_transaction.season_id | 0..1 → 0..N | The season a SEASON_REWARD belongs to. The partial unique index `uq_shard_season_reward` on player + season gives each player at most one reward per season. |
+| season → shard_transaction.season_id | 0..1 → 0..N | The season a SEASON_REWARD or an ORBIT_REWARD belongs to. `uq_shard_orbit_reward` on player + season + `orbit` gives at most one reward for each Orbit reached in a season. The partial unique index `uq_shard_season_reward` on player + season gives each player at most one reward per season. |
 | player → shard_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, after their 10th battle. |
 | battle → notification.battle_id | 0..1 → 0..N | The battle behind an "attack received" notification, or the challenge request received, accepted, rejected, expired or cancelled. |
 | trade → notification.trade_id | 0..1 → 0..N | The trade that was received, accepted, rejected, cancelled, expired or failed. |
@@ -167,7 +168,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Shards and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `shard_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET shard_balance = shard_balance - :cost WHERE id = :id AND shard_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
-**`shard_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have none of the three and a positive amount. The partial unique index `uq_shard_registration_bonus` allows only one registration bonus per player.
+**`shard_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, ORBIT_REWARD has `season_id`, `orbit` (2 to 4) and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have none of these columns and a positive amount. The partial unique index `uq_shard_registration_bonus` allows only one registration bonus per player.
 
 **The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
 
@@ -179,7 +180,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `shard_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
 
-In phase 1 Shards come from five sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus and the season reward. They are spent on packs.
+In phase 1 Shards come from six sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. When the email verification bonus is defined, it will be one more reason in `shard_transaction`. They are spent on packs.
 
 ## 2 · Collection and decks
 
@@ -436,7 +437,7 @@ erDiagram
 | trade → trade_card.trade_id | 1 → 1..N | The trade's cards; a trade without cards does not exist. |
 | card → trade_card.card_id | 1 → 0..N | The same card can appear in many trades at once: even a single copy can be offered to several players. |
 
-Because the same copy can be offered to several players, ownership is checked when the recipient accepts, not when the trade is proposed. Accepting a trade locks the `collection_card` rows involved (`SELECT ... FOR UPDATE`): if two players accept at the same instant, the second one finds the card already transferred and their trade becomes FAILED. Wanderers cannot be traded (`rarity.is_tradeable` = false). A CHECK constraint requires `closed_at` to be empty exactly while the trade is PENDING A scheduled job expires trades after 48 hours. Accepting a trade also recomputes the decks of both players (see view 2).
+Between the same two players there can be at most one PENDING trade, in either direction: the partial unique index `uq_trade_pending_pair` on `LEAST` and `GREATEST` of the two ids enforces it, as for challenges. Because the same copy can be offered to several players, ownership is checked when the recipient accepts, not when the trade is proposed. Accepting a trade locks the `collection_card` rows involved (`SELECT ... FOR UPDATE`): if two players accept at the same instant, the second one finds the card already transferred and their trade becomes FAILED. Wanderers cannot be traded (`rarity.is_tradeable` = false). A CHECK constraint requires `closed_at` to be empty exactly while the trade is PENDING A scheduled job expires trades after 48 hours. Accepting a trade also recomputes the decks of both players (see view 2).
 
 ## 5 · Battles
 
@@ -495,7 +496,7 @@ erDiagram
 | battle → battle.rematch_of_id | 0..1 → 0..N | A relationship of the table with itself: the battle this one is a rematch of. Rematches exist only in FRIEND and QUICK, where no trophies are at stake, so a battle can have any number of rematches. |
 | battle → battle_log.battle_id | 1 → 0..1 | The turn-by-turn log, one row per PLAYED battle. It is a separate table, mapped LAZY, so that the history list does not load every log. Deleting a battle deletes its log. |
 
-**Energy and trophies.** Each player starts a battle with 0 energy. Defeating an opposing card generates energy, and the first player to reach 30 energy wins. If a deck runs out first, each player gets +1 energy per card they still have, the card in play included, and the highest energy wins; equal energy is a draw. The bonus per card is a backend setting, to be tuned in testing. `challenger_energy` and `opponent_energy` store the final values, bonus included, so they are integers; the end event of `turn_log` records the reason the match ended and the bonus per card used, so old replays stay correct after the bonus is changed. Trophies are the ranking: they are awarded after a RANKED battle. Both players' changes come from the Elo formula with K = 32 (a draw counts 0.5), and what one gains the other loses: between players with the same trophies the winner gets +16 and the loser −16, and beating a stronger player gives more. `challenger_trophies_delta` and `opponent_trophies_delta` store how many each player actually gained or lost, after the floor at 0. The total number of trophies stays constant, except when the loser is already at 0 and cannot go lower: the winner still gains, so a few trophies are added, and the end-of-season reset (view 8) keeps this in check at the top. Trophies are partly reset at the end of each season (see view 8).
+**Energy and trophies.** Each player starts a battle with 0 energy. Defeating an opposing card generates energy, and the first player to reach the win threshold of the mode wins (30 in FRIEND and RANKED, 20 in QUICK, still to be tested). If a deck runs out first, each player gets 4 energy per card they still have, the card in play included, and the highest energy wins; equal energy is a draw, and going past the threshold with this bonus does not count as a win by threshold. Thresholds and bonus are backend settings, to be tuned in testing. `challenger_energy` and `opponent_energy` store the final values, bonus included, so they are integers; the end event of `turn_log` records the reason the match ended and the bonus per card used, so old replays stay correct after the bonus is changed. Trophies are the ranking: they are awarded after a RANKED battle. Both players' changes come from the Elo formula with K = 32 (a draw counts 0.5), and what one gains the other loses: between players with the same trophies the winner gets +16 and the loser −16, and beating a stronger player gives more. `challenger_trophies_delta` and `opponent_trophies_delta` store how many each player actually gained or lost, after the floor at 0. The total number of trophies stays constant, except when the loser is already at 0 and cannot go lower: the winner still gains, so a few trophies are added, and the end-of-season reset (view 8) keeps this in check at the top. Trophies are partly reset at the end of each season (see view 8).
 
 A battle keeps everything needed to replay it: the `seed` generated by the server, the copy of both decks (`decks_snapshot`, `jsonb`; a pending request holds only the challenger's deck) and, in `battle_log`, the turn-by-turn log (`turn_log`, `jsonb`). Battles already played stay correct even if a deck or a card changes later.
 
@@ -637,14 +638,16 @@ erDiagram
 3. It gives every player the season reward: a SEASON_REWARD row in `shard_transaction` with the season's `season_id`, the Shards added to `shard_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect Shards.
 4. It sets `season.reset_at`, so the same season is never reset twice, and creates the next season.
 
-**Season reward.** The reward depends on the trophies at the end of the season, before the reset (`season_result.trophies_before`), and is a multiple of the daily bonus, so it stays in proportion when the Shard amounts are tuned:
+**Orbits.** Trophies place every player in one of four Orbits, computed from `player.trophies` and never stored: Orbit 1 from 0 to 199 trophies, Orbit 2 from 200 to 499, Orbit 3 from 500 to 999, Orbit 4 from 1000. The first time in a season that a player reaches an Orbit higher than their current one, they receive an ORBIT_REWARD in `shard_transaction` with the season and the Orbit; `uq_shard_orbit_reward` makes it happen once per Orbit and season, even if the player drops and climbs again. The amount is still to be defined. There is a global leaderboard and one per Orbit; only players with at least one RANKED battle in the current season appear in it.
 
-| Trophies at season end | Reward |
+**Season reward.** The reward depends on the Orbit at the end of the season, before the reset (from `season_result.trophies_before`), and is a multiple of the daily bonus, so it stays in proportion when the Shard amounts are tuned:
+
+| Orbit at season end | Reward |
 | --- | --- |
-| 0 – 199 | 1 × daily bonus |
-| 200 – 499 | 3 × daily bonus |
-| 500 – 999 | 6 × daily bonus |
-| 1000 and more | 10 × daily bonus |
+| 1 (0 – 199 trophies) | 1 × daily bonus |
+| 2 (200 – 499) | 3 × daily bonus |
+| 3 (500 – 999) | 6 × daily bonus |
+| 4 (1000 and more) | 10 × daily bonus |
 
 The tiers are backend settings. Because everything happens in the same transaction as the reset, results and rewards always match, and `uq_shard_season_reward` makes a second run of the job fail instead of paying twice.
 
@@ -659,9 +662,9 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | Column | Allowed values |
 | --- | --- |
 | player.role | USER, ADMIN (Spring Security adds the `ROLE_` prefix) |
-| shard_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, SEASON_REWARD, INVITE_BONUS, PACK_PURCHASE |
+| shard_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, INVITE_BONUS, PACK_PURCHASE |
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
-| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
+| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
 | faction_advantage.type | ATTACK, DEFENSE |
 | trade.status | PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED, FAILED |
@@ -709,9 +712,11 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | Shards and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
 | Seasons do not overlap, and each one starts when the previous one ends | Creating a season, in the reset job |
 | A season is reset once, after `ends_at` | The reset job, checking that `reset_at` is empty |
-| The season reward matches the trophy tier at season end | The reset job, from `season_result.trophies_before` |
+| The season reward matches the Orbit at season end | The reset job, from `season_result.trophies_before` |
+| The Orbit reward is given the first time a player reaches a higher Orbit in the season | After each RANKED battle that raises the player's trophies |
+| A trade can be proposed or accepted only with a verified email, and leaves both players with at least 30 cards (Wanderer and archived cards excluded) | Proposing and accepting a trade |
 | A Wanderer found again extends its stay instead of adding a copy | Opening a pack |
 | Only event packs (with a purchase window) have a slot that can give a Wanderer | Creating and editing a pack type in the backoffice |
 | An event pack is sold only between `available_from` and `available_until` | Buying a pack, checking the time server-side |
 
-Rules that involve only the columns of one row are CHECK constraints in the schema, so the database enforces them: positive quantities, attack and defense from 1 to 10, two different players in a trade, battle, friendship or opponent list, a Shard transaction consistent with its reason, a trade closed only when it is no longer PENDING, the battle columns that depend on the mode and status, a single copy for Wanderers.
+Rules that involve only the columns of one row are CHECK constraints in the schema, so the database enforces them: positive quantities, attack and defense of at least 1, two different players in a trade, battle, friendship or opponent list, a Shard transaction consistent with its reason, a trade closed only when it is no longer PENDING, the battle columns that depend on the mode and status, a single copy for Wanderers.
