@@ -1,19 +1,19 @@
 # Will of the Void – Database schema
 
-The database runs on PostgreSQL 16 and has 28 tables, split into 8 views. Each view shows one area of the game and the relationships between its tables.
+The database runs on PostgreSQL 17 and has 31 tables, split into 8 views. Each view shows one area of the game and the relationships between its tables.
 
 The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. The initial Flyway migration is [`db/V1__init.sql`](../../db/V1__init.sql) in the repository root; it is applied from the filesystem (`spring.flyway.locations=filesystem:db`). Once applied, do not edit it: every later change goes into a new `db/V2__...sql` migration.
 
 | Area | Tables | Contents |
 | --- | --- | --- |
-| [1 · Player, credits and notifications](#1--player-credits-and-notifications) | `player`, `avatar`, `player_settings`, `player_token`, `credit_transaction`, `notification` | The account with its avatar, settings and tokens, every credit income or expense with its origin, and the notifications shown when the player comes back. |
+| [1 · Player, Shards and notifications](#1--player-shards-and-notifications) | `player`, `avatar`, `player_settings`, `player_token`, `shard_transaction`, `notification` | The account with its avatar, settings and tokens, every Shard income or expense with its origin, and the notifications shown when the player comes back. |
 | [2 · Collection and decks](#2--collection-and-decks) | `collection_card`, `memory_archive`, `deck`, `deck_card` | The cards each player owns, the departed Wanderers, and the saved decks with their cards. |
-| [3 · Catalog and packs](#3--catalog-and-packs) | `faction`, `faction_advantage`, `rarity`, `card`, `starter_deck_card`, `pack_type`, `pack_slot`, `pack_opening`, `pack_opening_card` | The card catalog with factions, advantages and rarities, the starter deck, the pack types with their slots, and the history of opened packs. |
+| [3 · Catalog and packs](#3--catalog-and-packs) | `faction`, `faction_advantage`, `rarity`, `card`, `starter_deck_card`, `pack_type`, `pack_slot`, `pack_slot_rarity`, `event_pack_card`, `pack_opening`, `pack_opening_card`, `pack_guarantee` | The card catalog with factions, advantages and rarities, the starter deck, the pack types with the rarity probabilities of each slot and the Wanderer cards of each event, the history of opened packs and each player's guarantee counters. |
 | [4 · Trades](#4--trades) | `trade`, `trade_card` | Trades between two players, with the cards offered and requested. |
 | [5 · Battles](#5--battles) | `battle`, `battle_log` | Battles in every mode (FRIEND, QUICK, RANKED) with result, energy and trophies, and the turn-by-turn log kept apart. |
 | [6 · Matchmaking](#6--matchmaking) | `opponent_list`, `opponent_list_entry` | The saved list of 5 opponents per mode, and the battle played against each of them. |
 | [7 · Friendships](#7--friendships) | `friendship` | Friend requests and accepted friendships. |
-| [8 · Seasons](#8--seasons) | `season`, `season_result` | The 4-week ranked seasons and, for each player, the trophies before and after the end-of-season reset with their final rank. The end-of-season credit reward is a row of `credit_transaction` (view 1). |
+| [8 · Seasons](#8--seasons) | `season`, `season_result` | The 4-week ranked seasons and, for each player, the trophies before and after the end-of-season reset with their final rank. The end-of-season reward and the Orbit rewards are rows of `shard_transaction` (view 1). |
 
 ## How to read the diagrams
 
@@ -34,22 +34,22 @@ The symbol at each end of a line says how many rows of that table match one row 
 
 In the relationship tables below, the **Cardinality** column reads from parent to child: "1 → 0..N" means that one parent row matches zero or more child rows.
 
-## 1 · Player, credits and notifications
+## 1 · Player, Shards and notifications
 
-Everything starts from `player`: the avatars a player can choose are in `avatar`, the accessibility settings synced with the account are in `player_settings`, the tokens for email verification, password reset and login refresh are in `player_token`, every change to the credit balance is recorded with its origin in `credit_transaction`, and what happens while the player is offline ends up in `notification`.
+Everything starts from `player`: the avatars a player can choose are in `avatar`, the accessibility settings synced with the account are in `player_settings`, the tokens for email verification, password reset and login refresh are in `player_token`, every change to the Shard balance is recorded with its origin in `shard_transaction`, and what happens while the player is offline ends up in `notification`.
 
 ```mermaid
 erDiagram
     avatar |o--o{ player : "pictures"
     player ||--o| player_settings : "configures"
     player ||--o{ player_token : "owns"
-    player ||--o{ credit_transaction : "records"
+    player ||--o{ shard_transaction : "records"
     player ||--o{ notification : "receives"
     deck |o--o| player : "defends with"
     player |o--o{ player : "invited"
-    pack_opening |o--o| credit_transaction : "payment"
-    player |o--o| credit_transaction : "invite bonus"
-    season |o--o{ credit_transaction : "season reward"
+    pack_opening |o--o| shard_transaction : "payment"
+    player |o--o| shard_transaction : "invite bonus"
+    season |o--o{ shard_transaction : "season or orbit reward"
     battle |o--o{ notification : "attack"
     trade |o--o{ notification : "trade result"
     card |o--o{ notification : "Wanderer left"
@@ -63,7 +63,7 @@ erDiagram
         timestamptz email_verified_at
         smallint avatar_id FK
         bigint defense_deck_id FK, UK
-        int credit_balance
+        int shard_balance
         int trophies
         timestamptz last_daily_bonus_at
         varchar(64) timezone
@@ -98,7 +98,7 @@ erDiagram
         timestamptz expires_at
         timestamptz used_at
     }
-    credit_transaction {
+    shard_transaction {
         bigint id PK
         bigint player_id FK
         int amount
@@ -106,6 +106,7 @@ erDiagram
         bigint pack_opening_id FK, UK
         bigint invited_player_id FK, UK
         int season_id FK
+        smallint orbit
         timestamptz created_at
     }
     notification {
@@ -149,13 +150,13 @@ erDiagram
 | avatar → player.avatar_id | 0..1 → 0..N | The avatar chosen by the player. Empty means the default avatar, shown by the frontend. |
 | player → player_settings.player_id | 1 → 0..1 | The player's settings, one row per player: `player_id` is both primary and foreign key. The row is created at registration with the default values, and deleted with the player. |
 | player → player_token.player_id | 1 → 0..N | Email verification, password reset and JWT refresh tokens. Only the SHA-256 hash of the token is stored (`token_hash`, UNIQUE); `used_at` marks a token already used. |
-| player → credit_transaction.player_id | 1 → 0..N | Every credit income or expense is a row. The balance in `player` is the sum of the transactions, updated in the same database transaction. |
+| player → shard_transaction.player_id | 1 → 0..N | Every Shard income or expense is a row. The balance in `player` is the sum of the transactions, updated in the same database transaction. |
 | player → notification.player_id | 1 → 0..N | Notifications shown when the player comes back: the welcome-back bonus, attacks received, challenge requests, trade results, departed Wanderers, friend requests. |
 | deck → player.defense_deck_id | 0..1 → 0..1 | The foreign key lives in `player`. Empty means no defense deck, so the player cannot attack. UNIQUE: a deck defends at most one player. |
 | player → player.invited_by_id | 0..1 → 0..N | A relationship of the table with itself: who invited whom. A player can invite many others; each has at most one inviter. |
-| pack_opening → credit_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
-| season → credit_transaction.season_id | 0..1 → 0..N | The season a SEASON_REWARD belongs to. The partial unique index `uq_credit_season_reward` on player + season gives each player at most one reward per season. |
-| player → credit_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, after their 10th battle. |
+| pack_opening → shard_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
+| season → shard_transaction.season_id | 0..1 → 0..N | The season a SEASON_REWARD or an ORBIT_REWARD belongs to. `uq_shard_orbit_reward` on player + season + `orbit` gives at most one reward for each Orbit reached in a season. The partial unique index `uq_shard_season_reward` on player + season gives each player at most one reward per season. |
+| player → shard_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, after their 10th battle. |
 | battle → notification.battle_id | 0..1 → 0..N | The battle behind an "attack received" notification, or the challenge request received, accepted, rejected, expired or cancelled. |
 | trade → notification.trade_id | 0..1 → 0..N | The trade that was received, accepted, rejected, cancelled, expired or failed. |
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
@@ -165,9 +166,9 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UK.
 
-**Credits and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `credit_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET credit_balance = credit_balance - :cost WHERE id = :id AND credit_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
+**Shards and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `shard_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET shard_balance = shard_balance - :cost WHERE id = :id AND shard_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
-**`credit_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have none of the three and a positive amount. The partial unique index `uq_credit_registration_bonus` allows only one registration bonus per player.
+**`shard_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, ORBIT_REWARD has `season_id`, `orbit` (2 to 4) and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have none of these columns and a positive amount. The partial unique index `uq_shard_registration_bonus` allows only one registration bonus per player.
 
 **The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
 
@@ -177,9 +178,9 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_text_labels` writes faction, rarity and advantages as text next to their colour or icon, for players who do not tell colours apart easily. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
-**Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `credit_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
+**Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `shard_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
 
-In phase 1 credits come from five sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus and the season reward. They are spent on packs.
+In phase 1 Shards come from six sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. When the email verification bonus is defined, it will be one more reason in `shard_transaction`. They are spent on packs.
 
 ## 2 · Collection and decks
 
@@ -257,12 +258,15 @@ erDiagram
     rarity ||--o{ card : "ranks"
     card ||--o| starter_deck_card : "starter deck"
     pack_type ||--|{ pack_slot : "has slots"
-    rarity ||--o{ pack_slot : "base rarity"
-    rarity |o--o{ pack_slot : "upgrade"
+    pack_slot ||--|{ pack_slot_rarity : "can give"
+    rarity ||--o{ pack_slot_rarity : "drawn with"
+    pack_type ||--o{ event_pack_card : "offers"
+    card ||--o{ event_pack_card : "is offered in"
     pack_type ||--o{ pack_opening : "is opened"
     player ||--o{ pack_opening : "opens"
     pack_opening ||--|{ pack_opening_card : "draws"
     card ||--o{ pack_opening_card : "is drawn"
+    player ||--o| pack_guarantee : "counts"
     faction {
         int id PK
         varchar(50) name UK
@@ -303,7 +307,8 @@ erDiagram
     pack_type {
         int id PK
         varchar(100) name
-        int credit_cost
+        varchar(8) kind
+        int shard_cost
         boolean is_active
         timestamptz available_from
         timestamptz available_until
@@ -311,17 +316,30 @@ erDiagram
     pack_slot {
         int pack_type_id PK, FK
         smallint position PK
-        int rarity_id FK
-        int card_count
-        int upgrade_rarity_id FK
-        numeric upgrade_chance "numeric(5,2)"
+    }
+    pack_slot_rarity {
+        int pack_type_id PK, FK
+        smallint position PK, FK
+        int rarity_id PK, FK
+        numeric probability "numeric(5,2)"
+    }
+    event_pack_card {
+        int pack_type_id PK, FK
+        bigint card_id PK, FK
     }
     pack_opening {
         bigint id PK
         bigint player_id FK
         int pack_type_id FK
-        int credits_spent
+        int shards_spent
+        varchar(10) guarantee
         timestamptz created_at
+    }
+    pack_guarantee {
+        bigint player_id PK, FK
+        smallint packs_without_champion
+        smallint standard_packs_without_elect
+        smallint event_packs_without_wanderer
     }
     pack_opening_card {
         bigint pack_opening_id PK, FK
@@ -336,23 +354,44 @@ erDiagram
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
-| faction → card.faction_id | 1 → 0..N | Every card belongs to one of the 7 factions. The Noble Gases have `is_inert` = true: no advantage or disadvantage. |
+| faction → card.faction_id | 1 → 0..N | Every card belongs to one of the 8 factions: the 6 elemental ones (Lava, Electro, Radio, Ice, Metal, Matte) and the 2 inert ones, Gem and Noble Gas. Gem and Noble Gas have `is_inert` = true: no advantage or disadvantage. |
 | faction → faction_advantage.dominant_faction_id | 1 → 0..N | The faction that prevails in the clash. |
 | faction → faction_advantage.dominated_faction_id | 1 → 0..N | The faction that is overpowered. With the relationship above, it forms a many-to-many of the table with itself: 12 rows, each with a type (ATTACK or DEFENSE) and a value. A unique index on `LEAST` and `GREATEST` of the two ids (`uq_faction_advantage_pair`) prevents having both A > B and B > A. |
 | rarity → card.rarity_id | 1 → 0..N | The card's rarity. `rarity` also stores total points, maximum copies, maximum per deck, duration and whether the card can be traded. |
 | card → starter_deck_card.card_id | 1 → 0..1 | The 30 cards of the starter deck, the same for every new player. Each card appears at most once, with its copies in `quantity`. |
-| pack_type → pack_slot.pack_type_id | 1 → 1..N | The pack's slots. The total number of cards is the sum of `card_count`. |
+| pack_type → pack_slot.pack_type_id | 1 → 1..N | The pack's slots, numbered by `position`. Each slot gives one card, so a pack of 5 cards has 5 slots. |
 | pack_type.available_from / available_until | – | The purchase window of an event pack. Both empty for the regular packs, which are always on sale. |
-| rarity → pack_slot.rarity_id | 1 → 0..N | The base rarity of the cards in the slot. |
-| rarity → pack_slot.upgrade_rarity_id | 0..1 → 0..N | The rarity the slot can turn into, with probability `upgrade_chance`. This is how Wanderers stay rare. |
+| pack_slot → pack_slot_rarity.(pack_type_id, position) | 1 → 1..N | Composite foreign key: the rarities a slot can give, each with its `probability` in percent. The probabilities of a slot add up to 100. |
+| rarity → pack_slot_rarity.rarity_id | 1 → 0..N | The rarity that can come out of the slot. |
+| pack_type → event_pack_card.pack_type_id | 1 → 0..N | The Wanderer cards an event pack can contain. Empty for standard packs. |
+| card → event_pack_card.card_id | 1 → 0..N | A Wanderer card offered by an event. The same Wanderer can come back in a later event. |
 | pack_type → pack_opening.pack_type_id | 1 → 0..N | Every opening refers to one pack type. |
-| player → pack_opening.player_id | 1 → 0..N | Who opened the pack and how much they paid that day (`credits_spent`). |
+| player → pack_guarantee.player_id | 1 → 0..1 | The player's guarantee counters, one row per player: `player_id` is both primary and foreign key. Created at registration with all counters at 0, deleted with the player. |
+| player → pack_opening.player_id | 1 → 0..N | Who opened the pack and how much they paid that day (`shards_spent`). |
 | pack_opening → pack_opening_card.pack_opening_id | 1 → 1..N | The cards drawn in that opening. |
 | card → pack_opening_card.card_id | 1 → 0..N | A card can be drawn in many openings; two copies in the same pack are one row with `quantity` 2. |
 
-**How a pack keeps a fixed number of cards per rarity and still makes Wanderers rare.** Each slot has a fixed number of cards of a base rarity. A slot can also have an upgrade: with probability `upgrade_chance`, its cards come from `upgrade_rarity_id` instead. For example, a slot of 1 Champion with a 5% upgrade to Wanderer gives a Wanderer in about one pack out of twenty. Two CHECK constraints require `upgrade_rarity_id` and `upgrade_chance` to be both set or both empty, and the upgrade rarity to differ from the base one. In `rarity`, `max_per_deck` and `duration_days` must be greater than 0 when they are set.
+**How a card is drawn.** Every pack has 5 slots and each slot gives one card. For each slot, the rarity is drawn with the probabilities in `pack_slot_rarity`, then the card is chosen at random, with the same probability, among the active cards of that rarity; in an event pack a Wanderer is chosen only among the cards of that event in `event_pack_card`. The rules set these values:
 
-**Wanderers are found only during events.** Regular packs have no slot that upgrades to Wanderer. Each event has its own `pack_type` with a Wanderer upgrade slot and a purchase window, `available_from` to `available_until`: the backend sells it only inside that window, so no probability has to be changed when an event starts or ends. A CHECK constraint (`chk_pack_availability_window`) requires the end to come after the start. Every opening points to its `pack_type`, so the history always shows which pack, and which probabilities, a Wanderer came from.
+| Slot | Standard pack | Event pack |
+| --- | --- | --- |
+| 1, 2, 3 | Captive 70%, Conscript 30% | Captive 70%, Conscript 30% |
+| 4 | Conscript 75%, Soldier 25% | Conscript 75%, Soldier 25% |
+| 5 | Soldier 84%, Champion 12.5%, Elect 3.5% | Soldier 84%, Champion 11%, Elect 1.5%, Wanderer 3.5% |
+
+The probabilities are rows, not code, so the backoffice can change them without a migration; the backend checks that each slot adds up to 100. A probability is greater than 0 and at most 100 (CHECK constraint). In `rarity`, `max_per_deck` and `duration_days` must be greater than 0 when they are set.
+
+**Wanderers are found only during events.** `pack_type.kind` is STANDARD or EVENT. Standard packs are always on sale and have no slot that can give a Wanderer. Each event has its own `pack_type` of kind EVENT, with Wanderer among the rarities of slot 5, its Wanderer cards in `event_pack_card` and a purchase window, `available_from` to `available_until`. The CHECK constraint `chk_pack_kind_window` requires the window for event packs and forbids it for standard ones, and `chk_pack_availability_window` requires the end to come after the start. The backend sells an event pack only inside its window, so no probability has to be changed when an event starts or ends. Every opening points to its `pack_type`, so the history always shows which pack, and which probabilities, a Wanderer came from.
+
+**Guarantees.** They stop long streaks of bad luck. `pack_guarantee` keeps three counters per player:
+
+| Counter | Counts | Guarantee | Reset by |
+| --- | --- | --- | --- |
+| `packs_without_champion` | every pack, standard and event | after 9 packs without a Champion card or rarer, the 10th pack has one | a Champion, Elect or Wanderer card in any pack |
+| `standard_packs_without_elect` | standard packs only | after 49 standard packs without an Elect card, the 50th has one | an Elect card found in a standard pack |
+| `event_packs_without_wanderer` | event packs only, carried over from one event to the next | after 49 event packs without a Wanderer card, the 50th has one | a Wanderer card |
+
+A guarantee replaces the card of slot 5 and never adds a card. If more than one applies to the same pack, the rarest wins (Wanderer, then Elect, then Champion), and a Wanderer or an Elect also meets the Champion guarantee. Opening a pack locks the player's `pack_guarantee` row, so two packs opened at the same time cannot both use or both miss the same guarantee, and updates the counters in the same transaction as the opening. `pack_opening.guarantee` records which guarantee, if any, decided slot 5, so the share of rare cards that come from guarantees can be measured. The three thresholds (10, 50 and 50 packs) are backend settings.
 
 The opening history makes it possible to show that the pack probabilities work as declared.
 
@@ -398,7 +437,7 @@ erDiagram
 | trade → trade_card.trade_id | 1 → 1..N | The trade's cards; a trade without cards does not exist. |
 | card → trade_card.card_id | 1 → 0..N | The same card can appear in many trades at once: even a single copy can be offered to several players. |
 
-Because the same copy can be offered to several players, ownership is checked when the recipient accepts, not when the trade is proposed. Accepting a trade locks the `collection_card` rows involved (`SELECT ... FOR UPDATE`): if two players accept at the same instant, the second one finds the card already transferred and their trade becomes FAILED. Wanderers cannot be traded (`rarity.is_tradeable` = false). A CHECK constraint requires `closed_at` to be empty exactly while the trade is PENDING A scheduled job expires trades after 48 hours. Accepting a trade also recomputes the decks of both players (see view 2).
+Between the same two players there can be at most one PENDING trade, in either direction: the partial unique index `uq_trade_pending_pair` on `LEAST` and `GREATEST` of the two ids enforces it, as for challenges. Because the same copy can be offered to several players, ownership is checked when the recipient accepts, not when the trade is proposed. Accepting a trade locks the `collection_card` rows involved (`SELECT ... FOR UPDATE`): if two players accept at the same instant, the second one finds the card already transferred and their trade becomes FAILED. Wanderers cannot be traded (`rarity.is_tradeable` = false). A CHECK constraint requires `closed_at` to be empty exactly while the trade is PENDING A scheduled job expires trades after 48 hours. Accepting a trade also recomputes the decks of both players (see view 2).
 
 ## 5 · Battles
 
@@ -457,7 +496,7 @@ erDiagram
 | battle → battle.rematch_of_id | 0..1 → 0..N | A relationship of the table with itself: the battle this one is a rematch of. Rematches exist only in FRIEND and QUICK, where no trophies are at stake, so a battle can have any number of rematches. |
 | battle → battle_log.battle_id | 1 → 0..1 | The turn-by-turn log, one row per PLAYED battle. It is a separate table, mapped LAZY, so that the history list does not load every log. Deleting a battle deletes its log. |
 
-**Energy and trophies.** Each player starts a battle with 0 energy. Defeating an opposing card generates energy, and the first player to reach 30 energy wins. If a deck runs out first, each player gets +1 energy per card they still have, the card in play included, and the highest energy wins; equal energy is a draw. The bonus per card is a backend setting, to be tuned in testing. `challenger_energy` and `opponent_energy` store the final values, bonus included, so they are integers; the end event of `turn_log` records the reason the match ended and the bonus per card used, so old replays stay correct after the bonus is changed. Trophies are the ranking: they are awarded after a RANKED battle with the Elo formula and K = 32, so a battle between players with the same trophies moves 16 trophies, and beating a stronger player gives more. `challenger_trophies_delta` and `opponent_trophies_delta` store how many each player gained or lost. Trophies are partly reset at the end of each season (see view 8).
+**Energy and trophies.** Each player starts a battle with 0 energy. Defeating an opposing card generates energy, and the first player to reach the win threshold of the mode wins (30 in FRIEND and RANKED, 20 in QUICK, still to be tested). If a deck runs out first, each player gets 4 energy per card they still have, the card in play included, and the highest energy wins; equal energy is a draw, and going past the threshold with this bonus does not count as a win by threshold. Thresholds and bonus are backend settings, to be tuned in testing. `challenger_energy` and `opponent_energy` store the final values, bonus included, so they are integers; the end event of `turn_log` records the reason the match ended and the bonus per card used, so old replays stay correct after the bonus is changed. Trophies are the ranking: they are awarded after a RANKED battle. Both players' changes come from the Elo formula with K = 32 (a draw counts 0.5), and what one gains the other loses: between players with the same trophies the winner gets +16 and the loser −16, and beating a stronger player gives more. `challenger_trophies_delta` and `opponent_trophies_delta` store how many each player actually gained or lost, after the floor at 0. The total number of trophies stays constant, except when the loser is already at 0 and cannot go lower: the winner still gains, so a few trophies are added, and the end-of-season reset (view 8) keeps this in check at the top. Trophies are partly reset at the end of each season (see view 8).
 
 A battle keeps everything needed to replay it: the `seed` generated by the server, the copy of both decks (`decks_snapshot`, `jsonb`; a pending request holds only the challenger's deck) and, in `battle_log`, the turn-by-turn log (`turn_log`, `jsonb`). Battles already played stay correct even if a deck or a card changes later.
 
@@ -596,19 +635,21 @@ erDiagram
 
 1. It writes a `season_result` row for every player who has not been deleted, with the current trophies, the trophies after the reset and the rank (`rank() OVER (ORDER BY trophies DESC)`).
 2. It lowers `player.trophies` with an atomic UPDATE that subtracts the reduction (`trophies_before - trophies_after`) instead of writing the new value (never going below 0), so a battle finished at the same instant is not lost.
-3. It gives every player the season reward: a SEASON_REWARD row in `credit_transaction` with the season's `season_id`, the credits added to `credit_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect credits.
+3. It gives every player the season reward: a SEASON_REWARD row in `shard_transaction` with the season's `season_id`, the Shards added to `shard_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect Shards.
 4. It sets `season.reset_at`, so the same season is never reset twice, and creates the next season.
 
-**Season reward.** The reward depends on the trophies at the end of the season, before the reset (`season_result.trophies_before`), and is a multiple of the daily bonus, so it stays in proportion when the credit amounts are tuned:
+**Orbits.** Trophies place every player in one of four Orbits, computed from `player.trophies` and never stored: Orbit 1 from 0 to 199 trophies, Orbit 2 from 200 to 499, Orbit 3 from 500 to 999, Orbit 4 from 1000. The first time in a season that a player reaches an Orbit higher than their current one, they receive an ORBIT_REWARD in `shard_transaction` with the season and the Orbit; `uq_shard_orbit_reward` makes it happen once per Orbit and season, even if the player drops and climbs again. The amount is still to be defined. There is a global leaderboard and one per Orbit; only players with at least one RANKED battle in the current season appear in it.
 
-| Trophies at season end | Reward |
+**Season reward.** The reward depends on the Orbit at the end of the season, before the reset (from `season_result.trophies_before`), and is a multiple of the daily bonus, so it stays in proportion when the Shard amounts are tuned:
+
+| Orbit at season end | Reward |
 | --- | --- |
-| 0 – 199 | 1 × daily bonus |
-| 200 – 499 | 3 × daily bonus |
-| 500 – 999 | 6 × daily bonus |
-| 1000 and more | 10 × daily bonus |
+| 1 (0 – 199 trophies) | 1 × daily bonus |
+| 2 (200 – 499) | 3 × daily bonus |
+| 3 (500 – 999) | 6 × daily bonus |
+| 4 (1000 and more) | 10 × daily bonus |
 
-The tiers are backend settings. Because everything happens in the same transaction as the reset, results and rewards always match, and `uq_credit_season_reward` makes a second run of the job fail instead of paying twice.
+The tiers are backend settings. Because everything happens in the same transaction as the reset, results and rewards always match, and `uq_shard_season_reward` makes a second run of the job fail instead of paying twice.
 
 The three numbers (K = 32, 4 weeks, threshold 1000) are backend settings, not database values, so they can be changed without a migration. With K = 32, an even battle moves 16 trophies, so the threshold is reached after several seasons of steady winning: the reset only concerns the best players.
 
@@ -621,9 +662,9 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | Column | Allowed values |
 | --- | --- |
 | player.role | USER, ADMIN (Spring Security adds the `ROLE_` prefix) |
-| credit_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, SEASON_REWARD, INVITE_BONUS, PACK_PURCHASE |
+| shard_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, INVITE_BONUS, PACK_PURCHASE |
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
-| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
+| notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
 | faction_advantage.type | ATTACK, DEFENSE |
 | trade.status | PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED, FAILED |
@@ -632,6 +673,8 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | battle.status | PENDING, REJECTED, EXPIRED, CANCELLED, PLAYED |
 | battle.outcome | CHALLENGER_WIN, OPPONENT_WIN, DRAW |
 | opponent_list.mode | QUICK, RANKED |
+| pack_type.kind | STANDARD, EVENT |
+| pack_opening.guarantee | CHAMPION, ELECT, WANDERER (empty when no guarantee applied) |
 | friendship.status | PENDING, ACCEPTED |
 
 ## Rules the database does not enforce on its own
@@ -642,10 +685,14 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | --- | --- |
 | The defense deck and the attack deck belong to the player using them | Setting the defense deck, creating a battle |
 | A deck does not use more copies than the player owns | Saving a deck, accepting a trade (the decks of both players are recomputed) |
-| Valid deck: 30 cards, copy and rarity limits, at most 15 cards per faction | Saving a deck, editing a card in the backoffice, a Wanderer expiring |
+| Valid deck: 30 cards, copy and rarity limits, at most 15 cards of the same elemental faction (Wanderer and Elect cards, already limited by rarity, do not count) | Saving a deck, editing a card in the backoffice, a Wanderer expiring |
 | The starter deck is always valid and has no Wanderers | Editing the starter deck or one of its cards in the backoffice |
-| Backoffice cards match their rarity: total points correct, Noble Gases always Wanderers | Creating and editing a card |
-| The cards drawn match the pack slots and their upgrade chances | Opening a pack |
+| Backoffice cards match their rarity: total points correct, Noble Gas cards always Wanderer and Gem cards always Elect | Creating and editing a card |
+| The cards drawn follow the slot probabilities, and an event Wanderer comes from `event_pack_card` | Opening a pack |
+| The probabilities of each slot add up to 100 | Creating and editing a pack type in the backoffice |
+| `event_pack_card` lists only Wanderer cards, and only for EVENT pack types | Creating and editing an event in the backoffice |
+| Guarantees are applied and their counters updated as in the table above | Opening a pack, with the `pack_guarantee` row locked |
+| Every player has a `pack_guarantee` row | Registration, in the same transaction |
 | Card ownership and no duplication in trades | Accepting a trade, with a pessimistic lock |
 | Wanderers cannot be traded | Proposing and accepting a trade |
 | Comeback bonus only after 7 days of absence and at most once every 30 days | Logging in, before the daily bonus, with the `player` row locked |
@@ -662,12 +709,14 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | The same opponent is attacked at most once a day in RANKED and 3 times a day in QUICK | Starting a battle, counting the PLAYED battles of the last 24 hours |
 | 5 RANKED attacks received in 24 hours give 12 hours of protection; attacking in RANKED ends it | After each RANKED battle, setting or clearing `protected_until` |
 | Protected players are not offered as opponents and cannot be attacked in RANKED | Generating the opponent list, starting a battle |
-| Credits and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
+| Shards and trophies never go below 0 and are not overwritten by stale entities | Atomic UPDATEs only; Elo result clamped at 0 |
 | Seasons do not overlap, and each one starts when the previous one ends | Creating a season, in the reset job |
 | A season is reset once, after `ends_at` | The reset job, checking that `reset_at` is empty |
-| The season reward matches the trophy tier at season end | The reset job, from `season_result.trophies_before` |
+| The season reward matches the Orbit at season end | The reset job, from `season_result.trophies_before` |
+| The Orbit reward is given the first time a player reaches a higher Orbit in the season | After each RANKED battle that raises the player's trophies |
+| A trade can be proposed or accepted only with a verified email, and leaves both players with at least 30 cards (Wanderer and archived cards excluded) | Proposing and accepting a trade |
 | A Wanderer found again extends its stay instead of adding a copy | Opening a pack |
-| Only event packs (with a purchase window) have a slot that upgrades to Wanderer | Creating and editing a pack type in the backoffice |
+| Only event packs (with a purchase window) have a slot that can give a Wanderer | Creating and editing a pack type in the backoffice |
 | An event pack is sold only between `available_from` and `available_until` | Buying a pack, checking the time server-side |
 
-Rules that involve only the columns of one row are CHECK constraints in the schema, so the database enforces them: positive quantities, attack and defense from 1 to 10, two different players in a trade, battle, friendship or opponent list, a credit transaction consistent with its reason, a trade closed only when it is no longer PENDING, the battle columns that depend on the mode and status, a single copy for Wanderers.
+Rules that involve only the columns of one row are CHECK constraints in the schema, so the database enforces them: positive quantities, attack and defense of at least 1, two different players in a trade, battle, friendship or opponent list, a Shard transaction consistent with its reason, a trade closed only when it is no longer PENDING, the battle columns that depend on the mode and status, a single copy for Wanderers.
