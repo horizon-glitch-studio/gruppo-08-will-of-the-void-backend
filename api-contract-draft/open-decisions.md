@@ -34,7 +34,7 @@ Reference: [02-cards-collection-decks.md](02-cards-collection-decks.md)
       proposal: allow incomplete or invalid decks to be saved so players can edit them incrementally; only `VALID` decks can be used in battle or set as the defense deck.
 ## Packs and Shards
 
-Reference: [03-packs-credits.md](03-packs-credits.md)
+Reference: [03-packs-shards.md](03-packs-shards.md)
 
 - [x] **Odds:** Decide whether pack odds are exposed to players and how rarity upgrades are represented.
 
