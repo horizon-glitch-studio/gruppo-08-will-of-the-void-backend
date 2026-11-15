@@ -39,8 +39,13 @@ The rematch request body is `{ "deckId": 12 }`. Either participant in a complete
 
 The client does not send the seed, outcome, final energy, or trophy deltas: these are authoritative on the server, which simulates the whole match at once. A match starts at zero energy; the win threshold depends on the mode: 30 in RANKED and FRIEND, 20 in QUICK. For RANKED matches, the persisted result contains both players' deltas. Both participants can watch the replay.
 
+Replays are available only to the two participants after the match ends and are kept for 90 days; the result stays in the history.
+
 Proposed specific errors: `BATTLE_NOT_FOUND` 404, `BATTLE_FORBIDDEN` 403, `BATTLE_NOT_PENDING` 409, `BATTLE_EXPIRED` 409, `OPPONENT_NOT_IN_LIST` 409, `OPPONENT_ALREADY_ATTACKED` 409, `MATCHMAKING_COOLDOWN` 429, `DECK_INVALID` 422.
 
-## To decide
+## Leaderboard and seasons
 
-- Replay retention.
+| Method | Route | Auth | Result |
+|---|---|---|---|
+| GET | `/leaderboard` | yes | paginated; optional `orbit` filter; only players with at least one RANKED battle in the current season |
+| GET | `/seasons/current` | yes | current season with start and end dates |

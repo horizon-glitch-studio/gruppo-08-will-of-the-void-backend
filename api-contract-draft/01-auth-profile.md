@@ -11,6 +11,7 @@ Confirmed decisions are stated as contract rules. Only the items listed at the e
 **Roles.** The DB role is `USER` or `ADMIN`. Spring Security adds the `ROLE_` prefix internally; the API uses `USER` / `ADMIN`.
 **Uniqueness.** Usernames and email addresses are unique case-insensitively (`uq_player_username_lower`, `uq_player_email_lower`).
 **Deleted accounts.** Deletion is a soft delete (`deleted_at`): username and email are anonymized. A deleted account cannot log in, and its public profile returns 404.
+**Pagination.** Paginated lists use `page` (starting at 0) and `size` (default 20, maximum 100). Lists are sorted by ID; histories and notifications are sorted newest first.
 
 ### Error format
 

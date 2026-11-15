@@ -4,7 +4,7 @@ Prefix: `/api/v1`. Models are based on `card`, `faction`, `rarity`, `collection_
 
 ## Card model
 
-The exposed card includes `id`, `name`, `description`, `imageUrl`, `faction`, `rarity`, `attack`, and `defense`. The public catalog returns active cards only. `faction` contains an ID and name; `rarity` contains a name, order, and copy limits relevant to the client. Pack odds are not part of the card.
+The exposed card includes `id`, `name`, `description`, `imageUrl`, `faction`, `rarity`, `attack`, and `defense`. The public catalog returns active cards only; inactive cards are managed through the admin endpoints. Copies of an inactive card already owned stay in the collection and can still be used in decks and battles. `faction` contains an ID and name; `rarity` contains a name, order, and copy limits relevant to the client. Pack odds are not part of the card.
 
 ## Catalog
 
@@ -63,9 +63,6 @@ Deck response: `id`, `name`, `status` (`INCOMPLETE`, `VALID`, `INVALID`), `cards
 
 Constraints: a valid deck has 30 cards, with copy limits per card and per rarity and a maximum of 15 cards per faction; quantities cannot exceed the player's collection. Apply current limits after trades and Wanderer expiration as well.
 
-Proposed specific errors: `DECK_NOT_FOUND` 404, `DECK_INVALID` 422, `CARD_NOT_OWNED` 409, `DECK_NAME_ALREADY_USED` 409, `DEFENSE_DECK_INVALID` 409, `CARD_NOT_FOUND` 404. Validation responses should report errors per card/field rather than a single string.
+A player can save up to 20 decks; deck names have at most 100 characters. The same card cannot appear twice in `cards`: the request is rejected with 400 `VALIDATION_FAILED`.
 
-## To decide
-
-- Whether the catalog and card profiles include inactive cards for administrators (outside this player-facing contract).
-- Sorting, filters, maximum number of decks, and name length.
+Proposed specific errors: `DECK_NOT_FOUND` 404, `DECK_LIMIT_REACHED` 409, `DECK_INVALID` 422, `CARD_NOT_OWNED` 409, `DECK_NAME_ALREADY_USED` 409, `DEFENSE_DECK_INVALID` 409, `CARD_NOT_FOUND` 404. Validation responses should report errors per card/field rather than a single string.
