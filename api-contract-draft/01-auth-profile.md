@@ -76,7 +76,7 @@ Example validation 400:
 
 ### 1.1 Registration
 
-Creates an account. Upon registration, the player receives the registration credit bonus (transaction `REGISTRATION_BONUS`, once per player), and the backend sends a verification email.
+Creates an account. Upon registration, the player receives the registration Shard bonus (transaction `REGISTRATION_BONUS`, once per player), and the backend sends a verification email.
 
 - **URL:** `/auth/register`
 - **Method:** `POST`
@@ -269,7 +269,7 @@ Request:
   "emailVerified": false,
   "role": "USER",
   "avatar": "avatar_07",
-  "creditBalance": 120,
+  "shardBalance": 120,
   "trophies": 340,
   "league": "ORBIT_2",
   "defenseDeckId": 12,
@@ -398,7 +398,7 @@ Request:
 }
 ```
 
-Never expose: email, credits, role, decks, time zone, or invite code.
+Never expose: email, Shards, role, decks, time zone, or invite code.
 Errors: 404 `PLAYER_NOT_FOUND`.
 
 ## 3. Open items

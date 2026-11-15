@@ -32,7 +32,7 @@ Reference: [02-cards-collection-decks.md](02-cards-collection-decks.md)
 - [x] **Saving invalid decks:** Confirm that incomplete/invalid decks can be saved; the model defines `INCOMPLETE`, `VALID`, and `INVALID` states. Only valid decks can be used in battles.
 
       proposal: allow incomplete or invalid decks to be saved so players can edit them incrementally; only `VALID` decks can be used in battle or set as the defense deck.
-## Packs and credits
+## Packs and Shards
 
 Reference: [03-packs-credits.md](03-packs-credits.md)
 
@@ -42,7 +42,7 @@ Reference: [03-packs-credits.md](03-packs-credits.md)
 - [x] **Pack offering:** Define pack purchase limits.
 
       proposal: no purchase limits; the standard pack is always on sale, an event pack only during its event.
-- [x] **History:** Define sorting and retention period of both battle and transactions for bought in game content like packs and credits.
+- [x] **History:** Define sorting and retention period of both battle and transactions for bought in game content like packs and Shards.
 
       proposal: sort newest first; retain opening and transaction history for the lifetime of the account, unless different retention requirements apply.
 - [x] **Daily bonus:** The bonus is granted at login. Decide whether to also provide an endpoint for claiming it manually.
