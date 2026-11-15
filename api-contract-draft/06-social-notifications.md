@@ -1,6 +1,6 @@
 # API Contract: Friendships, Notifications, and Presence
 
-Prefix: `/api/v1`. Based on `friendship` and `notification`. Online presence is volatile and is kept in memory rather than in the database; since there is no WebSocket, clients update it through periodic REST requests (see open decisions).
+Prefix: `/api/v1`. Based on `friendship` and `notification`. Online presence is volatile and is kept in memory rather than in the database; since there is no WebSocket, clients update it through a heartbeat every 30 seconds (see Friendships).
 
 ## Friendships
 
