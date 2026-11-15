@@ -64,9 +64,7 @@ Reference: [03-packs-credits.md](03-packs-credits.md)
 
 ## Battles and matchmaking
 
-- [ ] **Rematch:** Define the route for a rematch after a FRIEND or QUICK battle; RANKED has no rematch.
 
-      proposal: `POST /battles/{battleId}/rematch` with body `{ "deckId": 12 }`, available to either participant any number of times. It creates a new battle with the same mode and opponent, linked through `rematch_of_id`: instant against a valid defense deck, otherwise a challenge.
 - [ ] **Replays:** Define who can access them, how long they are retained, and when logs become visible.
 
       proposal: replays are available only to participants after the match ends; retain them for 90 days.

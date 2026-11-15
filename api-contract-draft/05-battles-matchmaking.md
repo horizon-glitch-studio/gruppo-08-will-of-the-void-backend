@@ -21,10 +21,13 @@ The start request body specifies `mode` and `deckId`. The list is persisted: ref
 | POST | `/battles/{battleId}/accept` | yes | accepts choosing one of the player's decks |
 | POST | `/battles/{battleId}/reject` | yes | rejects |
 | POST | `/battles/{battleId}/cancel` | yes | challenger cancels before acceptance |
+| POST | `/battles/{battleId}/rematch` | yes | starts a rematch of a FRIEND or QUICK battle |
 
 `POST /battles/friend` plays the battle at once if the friend has a valid defense deck (201 `PLAYED`); otherwise it creates a challenge (201 `PENDING`).
 
 Proposed challenge body: `{ "opponentUsername": "star_hunter", "deckId": 12 }`. The challenger's deck is saved as it is when the challenge is sent. A challenge expires 48 hours after it is sent and the challenger can cancel it before then; between two players there can be at most one pending challenge.
+
+The rematch request body is `{ "deckId": 12 }`. Either participant in a completed FRIEND or QUICK battle can request a rematch, with no limit on the number of rematches. The new battle uses the same mode and opponent and is linked to the original through `rematchOfId`. It starts immediately when the opponent has a valid defense deck; otherwise it creates a `PENDING` challenge that the opponent must accept. RANKED battles cannot be rematched. The selected deck must be valid and owned by the requesting player.
 
 ## Match, results, and history
 
