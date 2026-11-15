@@ -1,0 +1,174 @@
+{
+  "schemaVersion": "1.0",
+  "battleId": "battle-2026-001",
+  "mode": "FRIEND",
+  "rules": {
+    "energyWinThreshold": 30,
+    "survivorEnergyBonusPerCreature": 1
+  },
+  "players": [
+    {
+      "side": "A",
+      "playerId": "player-a",
+      "displayName": "Player A",
+      "startingEnergy": 26,
+      "deckSnapshot": {
+        "shuffleApplied": true,
+        "cards": [
+          {
+            "deckPosition": 0,
+            "cardInstanceId": "a-card-1",
+            "cardDefinitionId": "iron-guardian",
+            "name": "Iron Guardian",
+            "factionId": "iron",
+            "baseAttack": 5,
+            "effectiveAttack": 5,
+            "baseDefense": 7
+          }
+        ]
+      }
+    },
+    {
+      "side": "B",
+      "playerId": "player-b",
+      "displayName": "Player B",
+      "startingEnergy": 0,
+      "deckSnapshot": {
+        "shuffleApplied": true,
+        "cards": [
+          {
+            "deckPosition": 0,
+            "cardInstanceId": "b-card-1",
+            "cardDefinitionId": "ash-stalker",
+            "name": "Ash Stalker",
+            "factionId": "ash",
+            "baseAttack": 3,
+            "effectiveAttack": 3,
+            "baseDefense": 6
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 1,
+      "side": "A",
+      "cardInstanceId": "a-card-1",
+      "deckPosition": 0,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 2,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 1,
+      "side": "B",
+      "cardInstanceId": "b-card-1",
+      "deckPosition": 0,
+      "defenseAtDeployment": 6
+    },
+    {
+      "sequence": 3,
+      "type": "ROUND_RESOLVED",
+      "turnNumber": 1,
+      "clashNumber": 1,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "cardInstanceId": "a-card-1",
+          "attackUsed": 5,
+          "defenseBefore": 7,
+          "damageTaken": 3,
+          "defenseAfter": 4,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "cardInstanceId": "b-card-1",
+          "attackUsed": 3,
+          "defenseBefore": 6,
+          "damageTaken": 5,
+          "defenseAfter": 1,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 4,
+      "type": "ROUND_RESOLVED",
+      "turnNumber": 2,
+      "clashNumber": 1,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "cardInstanceId": "a-card-1",
+          "attackUsed": 5,
+          "defenseBefore": 4,
+          "damageTaken": 3,
+          "defenseAfter": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "cardInstanceId": "b-card-1",
+          "attackUsed": 3,
+          "defenseBefore": 1,
+          "damageTaken": 5,
+          "defenseAfter": -4,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 5,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 1,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "cardInstanceId": "a-card-1",
+          "finalDefense": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "cardInstanceId": "b-card-1",
+          "finalDefense": -4,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 4
+      },
+      "energyAfter": {
+        "A": 4,
+        "B": 0
+      }
+    },
+    {
+      "sequence": 6,
+      "type": "BATTLE_FINISHED",
+      "endReason": "ENERGY_THRESHOLD",
+      "winnerSide": "A",
+      "finalEnergyBySide": {
+        "A": 30,
+        "B": 0
+      }
+    }
+  ],
+  "result": {
+    "endReason": "ENERGY_THRESHOLD",
+    "winnerSide": "A",
+    "finalEnergyBySide": {
+      "A": 30,
+      "B": 0
+    }
+  }
+}

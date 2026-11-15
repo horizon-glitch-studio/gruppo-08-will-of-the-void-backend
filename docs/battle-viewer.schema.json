@@ -1,0 +1,640 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Battle Viewer Document",
+  "description": "A self-contained battle record for replaying a match in the frontend viewer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "battleId",
+    "mode",
+    "rules",
+    "players",
+    "events",
+    "result"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "battleId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The game mode, for example RANKED, QUICK, or FRIEND."
+    },
+    "rules": {
+      "$ref": "#/$defs/rules"
+    },
+    "players": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/playerSnapshot"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "side": {
+                "const": "A"
+              }
+            },
+            "required": [
+              "side"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "side": {
+                "const": "B"
+              }
+            },
+            "required": [
+              "side"
+            ]
+          }
+        }
+      ],
+      "description": "The two player snapshots. Each side must appear exactly once."
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/cardDeployedEvent"
+          },
+          {
+            "$ref": "#/$defs/roundResolvedEvent"
+          },
+          {
+            "$ref": "#/$defs/clashResolvedEvent"
+          },
+          {
+            "$ref": "#/$defs/deckExhaustedEvent"
+          },
+          {
+            "$ref": "#/$defs/battleFinishedEvent"
+          }
+        ]
+      },
+      "description": "Chronological event stream ordered by sequence. A turnNumber identifies a simultaneous round across the whole match; roundNumber is local to its clash."
+    },
+    "result": {
+      "$ref": "#/$defs/result"
+    }
+  },
+  "$defs": {
+    "side": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B"
+      ]
+    },
+    "energyBySide": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "A",
+        "B"
+      ],
+      "properties": {
+        "A": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "B": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "energyWinThreshold",
+        "survivorEnergyBonusPerCreature"
+      ],
+      "properties": {
+        "energyWinThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30,
+          "description": "The match ends when a player's energy reaches this value."
+        },
+        "survivorEnergyBonusPerCreature": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1,
+          "description": "Configured energy bonus per remaining creature when a deck is exhausted."
+        }
+      }
+    },
+    "cardSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deckPosition",
+        "cardInstanceId",
+        "cardDefinitionId",
+        "name",
+        "factionId",
+        "baseAttack",
+        "effectiveAttack",
+        "baseDefense"
+      ],
+      "properties": {
+        "deckPosition": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based position in this shuffled deck."
+        },
+        "cardInstanceId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique identifier of this owned card instance."
+        },
+        "cardDefinitionId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier of the card definition, useful for catalog lookups."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "factionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseAttack": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Card attack before faction effects."
+        },
+        "effectiveAttack": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Attack actually used in combat after faction effects."
+        },
+        "baseDefense": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Defense at the start of the battle, before taking damage."
+        }
+      }
+    },
+    "playerSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "side",
+        "playerId",
+        "displayName",
+        "startingEnergy",
+        "deckSnapshot"
+      ],
+      "properties": {
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "playerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startingEnergy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deckSnapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shuffleApplied",
+            "cards"
+          ],
+          "properties": {
+            "shuffleApplied": {
+              "type": "boolean",
+              "const": true
+            },
+            "cards": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/cardSnapshot"
+              },
+              "description": "Cards in their actual post-shuffle draw order."
+            }
+          }
+        }
+      }
+    },
+    "eventBase": {
+      "type": "object",
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "One-based position in the complete event stream."
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sequence",
+        "type"
+      ]
+    },
+    "cardDeployedEvent": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/eventBase"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "type",
+            "clashNumber",
+            "side",
+            "cardInstanceId",
+            "deckPosition",
+            "defenseAtDeployment"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "const": "CARD_DEPLOYED"
+            },
+            "clashNumber": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "side": {
+              "$ref": "#/$defs/side"
+            },
+            "cardInstanceId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "deckPosition": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "defenseAtDeployment": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "roundCardState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "side",
+        "cardInstanceId",
+        "attackUsed",
+        "defenseBefore",
+        "damageTaken",
+        "defenseAfter",
+        "defeated"
+      ],
+      "properties": {
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "cardInstanceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attackUsed": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "This card's effective attack, applied simultaneously to the opposing card."
+        },
+        "defenseBefore": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "damageTaken": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Equal to the opposing card's attackUsed for this round."
+        },
+        "defenseAfter": {
+          "type": "integer",
+          "description": "Defense after simultaneous damage; values at or below zero mean the card is defeated."
+        },
+        "defeated": {
+          "type": "boolean",
+          "description": "True exactly when defenseAfter is less than or equal to zero."
+        }
+      }
+    },
+    "roundResolvedEvent": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/eventBase"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "type",
+            "turnNumber",
+            "clashNumber",
+            "roundNumber",
+            "cards"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "const": "ROUND_RESOLVED"
+            },
+            "turnNumber": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "One-based round number across the entire match."
+            },
+            "clashNumber": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The card-versus-card clash containing this round."
+            },
+            "roundNumber": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "One-based round number within the current clash."
+            },
+            "cards": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/roundCardState"
+              },
+              "description": "Both active cards after simultaneous damage; one entry for side A and one for side B."
+            }
+          }
+        }
+      ]
+    },
+    "clashCardOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "side",
+        "cardInstanceId",
+        "finalDefense",
+        "defeated"
+      ],
+      "properties": {
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "cardInstanceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finalDefense": {
+          "type": "integer"
+        },
+        "defeated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "energyAward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipientSide",
+        "defeatedSide",
+        "amount"
+      ],
+      "properties": {
+        "recipientSide": {
+          "$ref": "#/$defs/side"
+        },
+        "defeatedSide": {
+          "$ref": "#/$defs/side"
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Absolute value of the defeated card's negative defense; zero when its final defense is exactly zero."
+        }
+      }
+    },
+    "clashResolvedEvent": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/eventBase"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "type",
+            "clashNumber",
+            "outcome",
+            "cards",
+            "energyAward",
+            "energyAfter"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "const": "CLASH_RESOLVED"
+            },
+            "clashNumber": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "BOTH_DEFEATED",
+                "A_DEFEATED",
+                "B_DEFEATED"
+              ],
+              "description": "A_DEFEATED or B_DEFEATED names the side whose card was defeated."
+            },
+            "cards": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/clashCardOutcome"
+              }
+            },
+            "energyAward": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/energyAward"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Null when both cards are defeated; otherwise records the surviving side's award."
+            },
+            "energyAfter": {
+              "$ref": "#/$defs/energyBySide"
+            }
+          }
+        }
+      ]
+    },
+    "deckExhaustedEvent": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/eventBase"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "type",
+            "exhaustedSide",
+            "remainingCardsBySide",
+            "bonusPerRemainingCreature",
+            "bonusAwardedBySide",
+            "energyAfter"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "const": "DECK_EXHAUSTED"
+            },
+            "exhaustedSide": {
+              "$ref": "#/$defs/side",
+              "description": "The side that has no card available to deploy."
+            },
+            "remainingCardsBySide": {
+              "$ref": "#/$defs/energyBySide",
+              "description": "Number of undeployed creature cards remaining in each deck."
+            },
+            "bonusPerRemainingCreature": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "bonusAwardedBySide": {
+              "$ref": "#/$defs/energyBySide",
+              "description": "Energy bonus awarded to each side for its remaining creatures."
+            },
+            "energyAfter": {
+              "$ref": "#/$defs/energyBySide"
+            }
+          }
+        }
+      ]
+    },
+    "battleFinishedEvent": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/eventBase"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "type",
+            "endReason",
+            "winnerSide",
+            "finalEnergyBySide"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "const": "BATTLE_FINISHED"
+            },
+            "endReason": {
+              "$ref": "#/$defs/endReason"
+            },
+            "winnerSide": {
+              "$ref": "#/$defs/winnerSide"
+            },
+            "finalEnergyBySide": {
+              "$ref": "#/$defs/energyBySide"
+            }
+          }
+        }
+      ]
+    },
+    "endReason": {
+      "type": "string",
+      "enum": [
+        "ENERGY_THRESHOLD",
+        "DECK_EXHAUSTED"
+      ]
+    },
+    "winnerSide": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "DRAW"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endReason",
+        "winnerSide",
+        "finalEnergyBySide"
+      ],
+      "properties": {
+        "endReason": {
+          "$ref": "#/$defs/endReason"
+        },
+        "winnerSide": {
+          "$ref": "#/$defs/winnerSide"
+        },
+        "finalEnergyBySide": {
+          "$ref": "#/$defs/energyBySide"
+        }
+      },
+      "description": "Convenience summary matching the final BATTLE_FINISHED event."
+    }
+  }
+}
