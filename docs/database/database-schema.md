@@ -336,7 +336,7 @@ erDiagram
 
 | Relationship | Cardinality | Meaning |
 | --- | --- | --- |
-| faction → card.faction_id | 1 → 0..N | Every card belongs to one of the 8 factions: the 6 elemental ones (Lava, Radio, Electro, Matte, Ice, Metal), the Noble Gases and the Gems. Noble Gases and Gems have `is_inert` = true: no advantage or disadvantage. |
+| faction → card.faction_id | 1 → 0..N | Every card belongs to one of the 8 factions: the 6 elemental ones (Lava, Electro, Radio, Ice, Metal, Matte) and the 2 inert ones, Gem and Noble Gas. Gem and Noble Gas have `is_inert` = true: no advantage or disadvantage. |
 | faction → faction_advantage.dominant_faction_id | 1 → 0..N | The faction that prevails in the clash. |
 | faction → faction_advantage.dominated_faction_id | 1 → 0..N | The faction that is overpowered. With the relationship above, it forms a many-to-many of the table with itself: 12 rows, each with a type (ATTACK or DEFENSE) and a value. A unique index on `LEAST` and `GREATEST` of the two ids (`uq_faction_advantage_pair`) prevents having both A > B and B > A. |
 | rarity → card.rarity_id | 1 → 0..N | The card's rarity. `rarity` also stores total points, maximum copies, maximum per deck, duration and whether the card can be traded. |
@@ -642,9 +642,9 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | --- | --- |
 | The defense deck and the attack deck belong to the player using them | Setting the defense deck, creating a battle |
 | A deck does not use more copies than the player owns | Saving a deck, accepting a trade (the decks of both players are recomputed) |
-| Valid deck: 30 cards, copy and rarity limits, at most 15 cards of the same elemental faction (Erranti and Eletti, already limited by rarity, do not count) | Saving a deck, editing a card in the backoffice, a Wanderer expiring |
+| Valid deck: 30 cards, copy and rarity limits, at most 15 cards of the same elemental faction (Wanderer and Elect cards, already limited by rarity, do not count) | Saving a deck, editing a card in the backoffice, a Wanderer expiring |
 | The starter deck is always valid and has no Wanderers | Editing the starter deck or one of its cards in the backoffice |
-| Backoffice cards match their rarity: total points correct, Noble Gases always Wanderers (Erranti) and Gems always Eletti | Creating and editing a card |
+| Backoffice cards match their rarity: total points correct, Noble Gas cards always Wanderer and Gem cards always Elect | Creating and editing a card |
 | The cards drawn match the pack slots and their upgrade chances | Opening a pack |
 | Card ownership and no duplication in trades | Accepting a trade, with a pessimistic lock |
 | Wanderers cannot be traded | Proposing and accepting a trade |
