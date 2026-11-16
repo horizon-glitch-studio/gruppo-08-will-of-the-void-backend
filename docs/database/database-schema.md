@@ -2,7 +2,7 @@
 
 The database runs on PostgreSQL 17 and has 31 tables, split into 8 views. Each view shows one area of the game and the relationships between its tables.
 
-The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. The initial Flyway migration is [`db/V1__init.sql`](../../db/V1__init.sql) in the repository root; it is applied from the filesystem (`spring.flyway.locations=filesystem:db`). Once applied, do not edit it: every later change goes into a new `db/V2__...sql` migration.
+The schema source is [`schema.sql`](schema.sql): every table declares its own foreign keys, and the unique indexes at the end enforce game rules such as case-insensitive usernames and one registration bonus per player. The initial Flyway migration is [`V1__init.sql`](../../api/src/main/resources/db/migration/V1__init.sql), a copy of this file in the `api` module, read from the classpath. Once applied, do not edit it: every later change goes into a new `V2__...sql` migration in the same folder.
 
 | Area | Tables | Contents |
 | --- | --- | --- |
@@ -156,7 +156,7 @@ erDiagram
 | player → player.invited_by_id | 0..1 → 0..N | A relationship of the table with itself: who invited whom. A player can invite many others; each has at most one inviter. |
 | pack_opening → shard_transaction.pack_opening_id | 0..1 → 0..1 | The payment for a pack: one opening produces one transaction. |
 | season → shard_transaction.season_id | 0..1 → 0..N | The season a SEASON_REWARD or an ORBIT_REWARD belongs to. `uq_shard_orbit_reward` on player + season + `orbit` gives at most one reward for each Orbit reached in a season. The partial unique index `uq_shard_season_reward` on player + season gives each player at most one reward per season. |
-| player → shard_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, after their 10th battle. |
+| player → shard_transaction.invited_player_id | 0..1 → 0..1 | The invite bonus, linked to the invited friend. UNIQUE: each invited player triggers the bonus once, when they have verified their email and played 10 battles against different opponents, in any mode. |
 | battle → notification.battle_id | 0..1 → 0..N | The battle behind an "attack received" notification, or the challenge request received, accepted, rejected, expired or cancelled. |
 | trade → notification.trade_id | 0..1 → 0..N | The trade that was received, accepted, rejected, cancelled, expired or failed. |
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
@@ -180,7 +180,20 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `shard_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
 
-In phase 1 Shards come from six sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. When the email verification bonus is defined, it will be one more reason in `shard_transaction`. They are spent on packs.
+In phase 1 Shards come from six sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. They are spent on packs.
+
+**Every bonus is a multiple of the daily bonus.** The daily bonus is the only amount in Shards; every other reward is the daily bonus times a multiplier, so changing one value keeps the whole economy in proportion. All of them are backend settings, and `shard_transaction.amount` stores the Shards actually given, so past rows stay correct when a multiplier changes.
+
+| Reason | Amount | When |
+| --- | --- | --- |
+| DAILY_BONUS | the daily bonus (to be defined) | First login of the day, in the player's time zone |
+| REGISTRATION_BONUS | multiplier to be defined × daily bonus | Once, at registration |
+| COMEBACK_BONUS | 3 × daily bonus (to be tested) | Login after at least 7 days of absence, at most once every 30 days |
+| INVITE_BONUS | multiplier to be defined × daily bonus | When the invited player has verified their email and played 10 battles against different opponents |
+| ORBIT_REWARD | multiplier to be defined × daily bonus | The first time in a season that the player reaches a higher Orbit (view 8) |
+| SEASON_REWARD | 1 to 10 × daily bonus, by Orbit (to be tested) | End of season, for players with at least one RANKED battle in it (view 8) |
+
+When the email verification bonus is defined, it will be one more reason in `shard_transaction`, also a multiple of the daily bonus.
 
 ## 2 · Collection and decks
 
@@ -356,7 +369,7 @@ erDiagram
 | --- | --- | --- |
 | faction → card.faction_id | 1 → 0..N | Every card belongs to one of the 8 factions: the 6 elemental ones (Lava, Electro, Radio, Ice, Metal, Matte) and the 2 inert ones, Gem and Noble Gas. Gem and Noble Gas have `is_inert` = true: no advantage or disadvantage. |
 | faction → faction_advantage.dominant_faction_id | 1 → 0..N | The faction that prevails in the clash. |
-| faction → faction_advantage.dominated_faction_id | 1 → 0..N | The faction that is overpowered. With the relationship above, it forms a many-to-many of the table with itself: 12 rows, each with a type (ATTACK or DEFENSE) and a value. A unique index on `LEAST` and `GREATEST` of the two ids (`uq_faction_advantage_pair`) prevents having both A > B and B > A. |
+| faction → faction_advantage.dominated_faction_id | 1 → 0..N | The faction that is overpowered. With the relationship above, it forms a many-to-many of the table with itself: 12 rows, each with a type and a value. Advantages work only in attack: the type is always ATTACK (CHECK constraint) and `value` is the ATK bonus of the dominant creature, 3 by default (to be tested). The column stays so that a new kind of advantage needs only a new CHECK value. A unique index on `LEAST` and `GREATEST` of the two ids (`uq_faction_advantage_pair`) prevents having both A > B and B > A. |
 | rarity → card.rarity_id | 1 → 0..N | The card's rarity. `rarity` also stores total points, maximum copies, maximum per deck, duration and whether the card can be traded. |
 | card → starter_deck_card.card_id | 1 → 0..1 | The 30 cards of the starter deck, the same for every new player. Each card appears at most once, with its copies in `quantity`. |
 | pack_type → pack_slot.pack_type_id | 1 → 1..N | The pack's slots, numbered by `position`. Each slot gives one card, so a pack of 5 cards has 5 slots. |
@@ -381,7 +394,7 @@ erDiagram
 
 The probabilities are rows, not code, so the backoffice can change them without a migration; the backend checks that each slot adds up to 100. A probability is greater than 0 and at most 100 (CHECK constraint). In `rarity`, `max_per_deck` and `duration_days` must be greater than 0 when they are set.
 
-**Wanderers are found only during events.** `pack_type.kind` is STANDARD or EVENT. Standard packs are always on sale and have no slot that can give a Wanderer. Each event has its own `pack_type` of kind EVENT, with Wanderer among the rarities of slot 5, its Wanderer cards in `event_pack_card` and a purchase window, `available_from` to `available_until`. The CHECK constraint `chk_pack_kind_window` requires the window for event packs and forbids it for standard ones, and `chk_pack_availability_window` requires the end to come after the start. The backend sells an event pack only inside its window, so no probability has to be changed when an event starts or ends. Every opening points to its `pack_type`, so the history always shows which pack, and which probabilities, a Wanderer came from.
+**Wanderers are found only during events, one event at a time.** `pack_type.kind` is STANDARD or EVENT. Standard packs are always on sale and have no slot that can give a Wanderer. Each event has its own `pack_type` of kind EVENT, with Wanderer among the rarities of slot 5, its Wanderer cards in `event_pack_card` and a purchase window, `available_from` to `available_until`. The CHECK constraint `chk_pack_kind_window` requires the window for event packs and forbids it for standard ones, and `chk_pack_availability_window` requires the end to come after the start. Only one event is active at a time: the backoffice refuses an active event pack whose window overlaps the window of another active event pack. The backend sells an event pack only inside its window, so no probability has to be changed when an event starts or ends. Every opening points to its `pack_type`, so the history always shows which pack, and which probabilities, a Wanderer came from.
 
 **Guarantees.** They stop long streaks of bad luck. `pack_guarantee` keeps three counters per player:
 
@@ -556,6 +569,20 @@ erDiagram
 
 The list is stored server-side because the API is stateless: reloading the page does not produce a new list, and the server accepts a battle or a request only against an opponent in the list for that mode whose `battle_id` is still empty (and, thanks to `uq_battle_pending_pair`, with no request already pending). If the list is refreshed while a request is pending and the request is accepted later, the battle is played but no entry is linked. Refreshing the list is limited by a 5-second cooldown measured from `last_refresh_at`, which only stops repeated clicks: the real limit on attacks is the per-opponent rule below, which a refresh cannot bypass. `trophies_at_generation` is for display only: the trophy calculation after a battle always uses the current values.
 
+**Who can be in a list.** The two modes fill the list in different ways:
+
+- **QUICK** holds random players active in the last 7 days. Activity is measured by `player.last_daily_bonus_at`: the daily bonus is collected at the first login of each day, so this column always holds the last day the player came in, and no new column is needed. The same column measures the absence for the comeback bonus (view 1). Players without a defense deck can be offered: against them the battle becomes a request.
+- **RANKED** holds players within a range of trophies around the player's own, which narrows as the Orbit rises (Orbits are described in view 8). It never holds the player themselves, players without a VALID defense deck or protected players.
+
+| Orbit of the player | Trophies | Range of the opponents |
+| --- | --- | --- |
+| 1 | 0 – 199 | ±200 |
+| 2 | 200 – 499 | ±150 |
+| 3 | 500 – 999 | ±100 |
+| 4 | 1000 and more | ±50 |
+
+The range never goes below 0 trophies. If fewer than 5 opponents fall in the range, it is doubled until the list is full. The ranges and the 7 days are backend settings.
+
 **Attack limits and protection.** These rules stop players from farming trophies on the same opponent and from losing many trophies while they are away. They need no extra column: the counts come from the PLAYED rows of `battle` (`challenger_id`, `opponent_id`, `mode`, `played_at`), and the numbers are backend settings that can change without a migration.
 
 | Rule | Value |
@@ -631,14 +658,16 @@ erDiagram
 | season → season_result.season_id | 1 → 0..N | The results of the season, written when it is reset. |
 | player → season_result.player_id | 1 → 0..N | The player's trophies before and after each reset, and their final rank. The primary key is season + player, so a player has one result per season. |
 
-**The reset.** New trophies = 1000 + (trophies − 1000) / 2, only for players above 1000: 1200 becomes 1100, 2000 becomes 1500. When `ends_at` has passed, a scheduled job runs in one transaction:
+**The reset.** New trophies = 1000 + (trophies − 1000) / 2, only for players above 1000: 1200 becomes 1100, 2000 becomes 1500. Trophies are integers, so the result is rounded to the nearest whole number, with a half rounded up: 1201 becomes 1101 (1100.5 rounded up). In SQL, with integer division, this is `1000 + (trophies - 1000 + 1) / 2`. When `ends_at` has passed, a scheduled job runs in one transaction:
 
 1. It writes a `season_result` row for every player who has not been deleted, with the current trophies, the trophies after the reset and the rank (`rank() OVER (ORDER BY trophies DESC)`).
 2. It lowers `player.trophies` with an atomic UPDATE that subtracts the reduction (`trophies_before - trophies_after`) instead of writing the new value (never going below 0), so a battle finished at the same instant is not lost.
 3. It gives every player the season reward: a SEASON_REWARD row in `shard_transaction` with the season's `season_id`, the Shards added to `shard_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect Shards.
 4. It sets `season.reset_at`, so the same season is never reset twice, and creates the next season.
 
-**Orbits.** Trophies place every player in one of four Orbits, computed from `player.trophies` and never stored: Orbit 1 from 0 to 199 trophies, Orbit 2 from 200 to 499, Orbit 3 from 500 to 999, Orbit 4 from 1000. The first time in a season that a player reaches an Orbit higher than their current one, they receive an ORBIT_REWARD in `shard_transaction` with the season and the Orbit; `uq_shard_orbit_reward` makes it happen once per Orbit and season, even if the player drops and climbs again. The amount is still to be defined. There is a global leaderboard and one per Orbit; only players with at least one RANKED battle in the current season appear in it.
+**Orbits.** Trophies place every player in one of four Orbits, computed from `player.trophies` and never stored: Orbit 1 from 0 to 199 trophies, Orbit 2 from 200 to 499, Orbit 3 from 500 to 999, Orbit 4 from 1000. The first time in a season that a player reaches an Orbit higher than their current one, they receive an ORBIT_REWARD in `shard_transaction` with the season and the Orbit; `uq_shard_orbit_reward` makes it happen once per Orbit and season, even if the player drops and climbs again. The amount is a multiple of the daily bonus, with the multiplier still to be defined. The Orbits also set the range of trophies of the RANKED opponent list (view 6).
+
+**Leaderboard.** There is a global leaderboard and one for each Orbit. Both list players by `player.trophies`, from the most to the fewest, and players with the same trophies share the same position (`rank()`, not `row_number()`). Only players who played at least one RANKED battle in the current season appear: a PLAYED row of `battle` with mode RANKED, the player as challenger or opponent, and `played_at` from the current `season.starts_at`. Deleted players never appear. The Orbit leaderboard filters by the trophy range of the Orbit and ranks the players inside it, so its positions start from 1. The leaderboard is computed when it is read and is not stored; at the end of the season the rank is saved in `season_result.final_rank`.
 
 **Season reward.** The reward depends on the Orbit at the end of the season, before the reset (from `season_result.trophies_before`), and is a multiple of the daily bonus, so it stays in proportion when the Shard amounts are tuned:
 
@@ -666,7 +695,7 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
 | notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
-| faction_advantage.type | ATTACK, DEFENSE |
+| faction_advantage.type | ATTACK (advantages work only in attack) |
 | trade.status | PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED, FAILED |
 | trade_card.side | OFFER, REQUEST |
 | battle.mode | FRIEND, QUICK, RANKED |
@@ -688,6 +717,8 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | Valid deck: 30 cards, copy and rarity limits, at most 15 cards of the same elemental faction (Wanderer and Elect cards, already limited by rarity, do not count) | Saving a deck, editing a card in the backoffice, a Wanderer expiring |
 | The starter deck is always valid and has no Wanderers | Editing the starter deck or one of its cards in the backoffice |
 | Backoffice cards match their rarity: total points correct, Noble Gas cards always Wanderer and Gem cards always Elect | Creating and editing a card |
+| The ATK share (ATK divided by the rarity points) of the cards of each faction is spread around 45%: at least 60% of the cards between 35% and 55%, 80% between 30% and 60%, 90% between 25% and 65%, and the average share of the faction as close to 45% as whole numbers allow | Creating and editing a card, checked on all the active cards of its faction |
+| Only one event is active at a time: the windows of active EVENT pack types do not overlap | Creating and editing an event in the backoffice |
 | The cards drawn follow the slot probabilities, and an event Wanderer comes from `event_pack_card` | Opening a pack |
 | The probabilities of each slot add up to 100 | Creating and editing a pack type in the backoffice |
 | `event_pack_card` lists only Wanderer cards, and only for EVENT pack types | Creating and editing an event in the backoffice |
@@ -701,11 +732,14 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | The time zone changes at most once every 30 days | Profile update, with an atomic UPDATE on `timezone_changed_at` |
 | Every player has a `player_settings` row | Registration, in the same transaction |
 | A player can choose only an active avatar | Profile update, checking `avatar.is_active` |
-| Invite bonus only after the invited player's 10th battle | Saving each battle of an invited player |
+| Invite bonus only when the invited player has verified their email and played 10 battles against different opponents, in any mode | Saving each battle of an invited player and verifying their email, counting the distinct opponents of their PLAYED battles |
 | A challenge request and a trade are accepted within 48 hours | Accepting, checking `expires_at` server-side; a job marks them EXPIRED |
 | A battle is instant only if the opponent's defense deck is VALID; RANKED requires a valid defense deck from both players | Starting a battle |
 | An opponent list entry gets its `battle_id` only when the battle is PLAYED | Playing an instant battle, accepting a request |
 | Opponent list refreshed only after the 5-second cooldown | Refreshing the list, checking `last_refresh_at` |
+| A QUICK list holds only players active in the last 7 days; a RANKED list holds only players in the trophy range of the player's Orbit | Generating the opponent list, from `last_daily_bonus_at` and `trophies` |
+| The leaderboard, global and per Orbit, lists only players with a PLAYED RANKED battle in the current season | Reading the leaderboard |
+| The season reset rounds to the nearest whole number, a half up | The reset job |
 | The same opponent is attacked at most once a day in RANKED and 3 times a day in QUICK | Starting a battle, counting the PLAYED battles of the last 24 hours |
 | 5 RANKED attacks received in 24 hours give 12 hours of protection; attacking in RANKED ends it | After each RANKED battle, setting or clearing `protected_until` |
 | Protected players are not offered as opponents and cannot be attacked in RANKED | Generating the opponent list, starting a battle |
