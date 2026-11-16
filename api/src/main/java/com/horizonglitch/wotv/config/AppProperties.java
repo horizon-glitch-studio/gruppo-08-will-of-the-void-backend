@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Settings under {@code app.*} in application.properties. */
 @ConfigurationProperties("app")
-public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens tokens, Economy economy) {
+public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens tokens, Economy economy, Decks decks) {
 
 	public record Cors(List<String> allowedOrigins) {
 	}
@@ -17,6 +17,10 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 
 	/** Lifetime of the email verification and password reset links. */
 	public record Tokens(Duration emailVerification, Duration passwordReset) {
+	}
+
+	/** Deck limits of rules/decks.md: DECK_SIZE, MAX_PER_FACTION and MAX_SAVED_DECKS. */
+	public record Decks(int size, int maxPerElementalFaction, int maxSaved) {
 	}
 
 	/** Every bonus is a multiple of the daily bonus (rules/economy.md). */

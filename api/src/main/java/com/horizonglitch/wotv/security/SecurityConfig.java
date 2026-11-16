@@ -55,6 +55,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
 						.requestMatchers(PUBLIC_DOCS).permitAll()
 						.requestMatchers(HttpMethod.GET, "/avatars/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/cards", "/api/v1/cards/*", "/api/v1/game-data").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
 						.requestMatchers(HttpMethod.GET, "/api/v1/users/*").permitAll()
 						.requestMatchers("/error").permitAll()

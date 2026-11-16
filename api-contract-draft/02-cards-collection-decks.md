@@ -66,3 +66,14 @@ Constraints: a valid deck has 30 cards, with copy limits per card and per rarity
 A player can save up to 20 decks; deck names have at most 100 characters. The same card cannot appear twice in `cards`: the request is rejected with 400 `VALIDATION_FAILED`.
 
 Proposed specific errors: `DECK_NOT_FOUND` 404, `DECK_LIMIT_REACHED` 409, `DECK_INVALID` 422, `CARD_NOT_OWNED` 409, `DECK_NAME_ALREADY_USED` 409, `DEFENSE_DECK_INVALID` 409, `CARD_NOT_FOUND` 404. Validation responses should report errors per card/field rather than a single string.
+
+## Implemented behaviour
+
+- **Catalog.** `sort` is `id` (default), `name`, `attack`, `defense` or `rarity`; another value is 400 `VALIDATION_FAILED` with `SORT_INVALID`. `search` matches part of the name, ignoring case. Rarity points are never exposed. `/game-data` also returns `deckRules` (`deckSize`, `maxPerElementalFaction`, `maxSavedDecks`).
+- **Pagination errors.** `page` below 0 or `size` outside 1–100 is 400 `VALIDATION_FAILED` with `PAGE_INVALID` or `SIZE_INVALID`.
+- **Collection.** `availableInDeck=true` leaves out Wanderers whose time has ended, even before they are moved to the archive. `GET /users/me/collection/{cardId}` is 404 `CARD_NOT_FOUND` for a card not owned. The archive is sorted by departure, most recent first.
+- **Saving a deck.** A card that does not exist is 404 `CARD_NOT_FOUND`. A card not owned, or used in more copies than owned, is 409 `CARD_NOT_OWNED` with one `fieldErrors` item per card (`cards[i]`). Other `fieldErrors` codes: `CARD_DUPLICATED`, `QUANTITY_INVALID`, `DECK_NAME_TOO_LONG`, `FIELD_REQUIRED`.
+- **Deck status.** A deck that breaks a rule is saved anyway, with status `INVALID` (or `INCOMPLETE` when it only has fewer than 30 cards), so drafts can be kept. The status is recomputed every time the deck is saved or read, so it follows trades and departed Wanderers.
+- **`validationErrors`.** Each item is `{ "code", "cardId", "rarityId", "factionId", "limit", "actual" }`, with only the ids that apply. Codes: `DECK_SIZE`, `TOO_MANY_COPIES`, `RARITY_LIMIT`, `FACTION_LIMIT` (elemental factions only), `NOT_ENOUGH_COPIES`, `CARD_NOT_PLAYABLE` (a Wanderer whose time has ended).
+- **Defense deck.** `PUT /{deckId}/defense` returns the deck (200) and is 409 `DEFENSE_DECK_INVALID` unless the deck is `VALID`. A defense deck that later becomes invalid stays selected but cannot defend. Deleting it leaves the player without a defense deck.
+- **`POST /users/me/decks/validate`** takes `{ "cards": [...] }` and returns `status`, `totalCards` and `validationErrors`; cards not owned are reported as `NOT_ENOUGH_COPIES` instead of being refused.
