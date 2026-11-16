@@ -5,6 +5,8 @@ import com.horizonglitch.wotv.card.StarterDeckService;
 import com.horizonglitch.wotv.collection.CollectionService;
 import com.horizonglitch.wotv.common.ApiError;
 import com.horizonglitch.wotv.common.ApiException;
+import com.horizonglitch.wotv.common.PasswordRules;
+import com.horizonglitch.wotv.common.TimezoneRules;
 import com.horizonglitch.wotv.common.mail.EmailSender;
 import com.horizonglitch.wotv.config.AppProperties;
 import com.horizonglitch.wotv.deck.DeckService;
@@ -13,9 +15,7 @@ import com.horizonglitch.wotv.player.Player;
 import com.horizonglitch.wotv.player.PlayerService;
 import com.horizonglitch.wotv.shard.LoginBonuses;
 import com.horizonglitch.wotv.shard.ShardService;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,9 +31,6 @@ public class AuthService {
 
 	private static final Set<String> RESERVED_USERNAMES = Set.of(
 			"me", "admin", "administrator", "root", "system", "support", "moderator", "null", "undefined");
-
-	/** BCrypt hashes at most 72 bytes: longer passwords are refused instead of being truncated. */
-	private static final int PASSWORD_MAX_BYTES = 72;
 
 	private final PlayerService playerService;
 	private final ShardService shardService;
@@ -76,10 +73,10 @@ public class AuthService {
 		if (RESERVED_USERNAMES.contains(request.username().toLowerCase(Locale.ROOT))) {
 			errors.add(new ApiError.FieldErrorItem("username", "USERNAME_RESERVED"));
 		}
-		if (tooLong(request.password())) {
+		if (PasswordRules.tooLong(request.password())) {
 			errors.add(new ApiError.FieldErrorItem("password", "PASSWORD_TOO_LONG"));
 		}
-		if (!isIanaTimezone(request.timezone())) {
+		if (!TimezoneRules.isIana(request.timezone())) {
 			errors.add(new ApiError.FieldErrorItem("timezone", "TIMEZONE_INVALID"));
 		}
 		if (!errors.isEmpty()) {
@@ -186,7 +183,7 @@ public class AuthService {
 	/** Sets the new password and logs the player out of every device. */
 	@Transactional
 	public void resetPassword(String token, String newPassword) {
-		if (tooLong(newPassword)) {
+		if (PasswordRules.tooLong(newPassword)) {
 			throw ApiException.validation(List.of(new ApiError.FieldErrorItem("newPassword", "PASSWORD_TOO_LONG")));
 		}
 		PlayerToken used = tokenService.consume(token, TokenType.PASSWORD_RESET)
@@ -201,15 +198,6 @@ public class AuthService {
 				properties.tokens().emailVerification());
 		emailSender.send(player.getEmail(), "Verify your Will of the Void email",
 				"Open this link to verify your email: " + properties.frontendUrl() + "/verify-email?token=" + token);
-	}
-
-	private static boolean tooLong(String password) {
-		return password != null && password.getBytes(StandardCharsets.UTF_8).length > PASSWORD_MAX_BYTES;
-	}
-
-	/** Only region ids such as Europe/Rome: offsets like +01:00 do not follow daylight saving time. */
-	static boolean isIanaTimezone(String timezone) {
-		return timezone != null && timezone.contains("/") && ZoneId.getAvailableZoneIds().contains(timezone);
 	}
 
 	private static ApiException invalidCredentials() {
