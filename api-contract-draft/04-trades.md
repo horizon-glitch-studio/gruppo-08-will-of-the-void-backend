@@ -1,0 +1,42 @@
+# API Contract: Trades
+
+Prefix: `/api/v1`. Based on `trade` and `trade_card`. A trade has a proposer and a recipient, and a status of `PENDING`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `EXPIRED`, or `FAILED`; expected duration is 48 hours.
+
+## Routes
+
+| Method | Route | Auth | Result |
+|---|---|---|---|
+| GET | `/trades` | yes | user's trades; proposed filters: `status`, `direction` (`incoming`/`outgoing`) |
+| POST | `/trades` | yes | proposes a trade, 201 |
+| GET | `/trades/{tradeId}` | yes | details if the user is one of the parties |
+| POST | `/trades/{tradeId}/accept` | yes | accepts as recipient, 200 |
+| POST | `/trades/{tradeId}/reject` | yes | rejects as recipient, 200 |
+| POST | `/trades/{tradeId}/cancel` | yes | cancels as proposer, 200 |
+
+Create:
+
+```json
+{
+  "recipientUsername": "star_hunter",
+  "offeredCards": [{ "cardId": 17, "quantity": 1 }],
+  "requestedCards": [{ "cardId": 51, "quantity": 2 }]
+}
+```
+
+Proposed response: trade with `id`, `status`, `proposer`, `recipient`, `offeredCards`, `requestedCards`, `createdAt`, `expiresAt`, and `closedAt`. Acceptance transfers cards atomically and recalculates both players' deck status. The server rechecks ownership and quantity at acceptance with a lock; non-tradable cards (Wanderers) are not allowed. The recipient cannot accept after expiration.
+
+Proposed specific errors:
+
+- `TRADE_NOT_FOUND` 404: trade does not exist.
+- `PLAYER_NOT_FOUND` 404: recipient username does not exist (same code as the public profile endpoint).
+- `TRADE_FORBIDDEN` 403: caller is not the proposer or recipient, or is a party but lacks permission for that action (for example, the proposer tries to accept). This check also applies when a caller directly requests a trade by ID.
+- `EMAIL_NOT_VERIFIED` 403: proposer must verify their email before trading.
+- `TRADE_INVALID_CARDS` 400: invalid card IDs or quantities, non-tradeable cards, an empty trade, duplicate `cardId` entries within the same list, or attempting to trade with oneself. To trade multiple copies of a card, use one entry with `quantity` greater than 1, as in the example above.
+- `TRADE_ALREADY_PENDING` 409: a pending trade already exists between the same pair of players.
+- `TRADE_NOT_PENDING` 409: trade is no longer pending, including when it has expired; the response includes its current status.
+- `TRADE_MIN_COLLECTION` 409: accepting would leave a player with fewer than 30 cards; the trade remains pending.
+- `TRADE_FAILED` 409: at acceptance, one or more cards are no longer available. The server closes the trade as `FAILED` without transferring any cards and returns this error; the client can retrieve the updated trade with `GET /trades/{tradeId}`.
+
+A trade can hold any number of cards on each side, and one side can be empty (a gift); every trade moves at least one card. Self-trading is forbidden.
+
+The other party is notified when a trade is received and when it reaches a final status (accepted, rejected, cancelled, expired, failed).

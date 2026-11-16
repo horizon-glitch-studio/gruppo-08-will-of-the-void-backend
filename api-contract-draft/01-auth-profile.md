@@ -11,6 +11,7 @@ Confirmed decisions are stated as contract rules. Only the items listed at the e
 **Roles.** The DB role is `USER` or `ADMIN`. Spring Security adds the `ROLE_` prefix internally; the API uses `USER` / `ADMIN`.
 **Uniqueness.** Usernames and email addresses are unique case-insensitively (`uq_player_username_lower`, `uq_player_email_lower`).
 **Deleted accounts.** Deletion is a soft delete (`deleted_at`): username and email are anonymized. A deleted account cannot log in, and its public profile returns 404.
+**Pagination.** Paginated lists use `page` (starting at 0) and `size` (default 20, maximum 100). Lists are sorted by ID; histories and notifications are sorted newest first.
 
 ### Error format
 
@@ -75,7 +76,7 @@ Example validation 400:
 
 ### 1.1 Registration
 
-Creates an account. Upon registration, the player receives the registration credit bonus (transaction `REGISTRATION_BONUS`, once per player), and the backend sends a verification email.
+Creates an account. Upon registration, the player receives the registration Shard bonus (transaction `REGISTRATION_BONUS`, once per player), and the backend sends a verification email.
 
 - **URL:** `/auth/register`
 - **Method:** `POST`
@@ -149,11 +150,15 @@ Request:
   "dailyBonus": {
     "granted": true,
     "amount": 10
+  },
+  "comebackBonus": {
+    "granted": false,
+    "amount": 0
   }
 }
 ```
 
-`expiresIn` is in seconds. If the bonus was already claimed today: `"dailyBonus": { "granted": false, "amount": 0 }`. Numeric values in the example are illustrative.
+`expiresIn` is in seconds. If the bonus was already claimed today: `"dailyBonus": { "granted": false, "amount": 0 }`. `comebackBonus` is granted on top of the daily bonus at the first login after at least 7 days without playing, at most once every 30 days; otherwise `{ "granted": false, "amount": 0 }`. Numeric values in the example are illustrative.
 
 Errors: 400 `VALIDATION_FAILED`, 401 `INVALID_CREDENTIALS`. Attempt limits and the corresponding 429 response are deferred to phase 2.
 
@@ -264,9 +269,9 @@ Request:
   "emailVerified": false,
   "role": "USER",
   "avatar": "avatar_07",
-  "creditBalance": 120,
+  "shardBalance": 120,
   "trophies": 340,
-  "league": "ORBIT_3",
+  "league": "ORBIT_2",
   "defenseDeckId": 12,
   "protectedUntil": null,
   "timezone": "Europe/Rome",
@@ -285,8 +290,8 @@ Request:
 
 Field notes:
 
-- `avatar`: key for a preset avatar (image uploads are not supported). The field **does not yet exist in the DB** and must be added with a V2 migration.
-- `league`: calculated from trophies, not stored. Orbit thresholds and names are to be defined with Marco. The example is illustrative.
+- `avatar`: key for a preset avatar (image uploads are not supported), stored as `player.avatar_id`.
+- `league`: calculated from trophies, not stored. Thresholds: 0–199, 200–499, 500–999, 1000 and more; names are `[TBD]`.
 - `defenseDeckId`: `null` if the player has no defensive deck. The frontend must also check whether the deck is valid (see the deck contract).
 - `protectedUntil`: `null` if the player is not protected.
 - `stats`: derived from the `battle` table (only matches with status `PLAYED`). `winRate` = `wins / matchesPlayed * 100`, rounded to one decimal place, or `0` if the player has not played. Draws count as matches played, not wins.
@@ -310,7 +315,7 @@ Request (all fields are optional; send only the fields to change):
 ```
 
 **200 OK** response: same object as `GET /users/me`.
-Errors: 400 `VALIDATION_FAILED` (unknown avatar or invalid time zone), 401 `TOKEN_INVALID`.
+Errors: 400 `VALIDATION_FAILED` (unknown avatar or invalid time zone), 401 `TOKEN_INVALID`, 409 `TIMEZONE_CHANGE_TOO_SOON` (time zone changed less than 30 days ago).
 Username and email **cannot** be changed in v1.
 
 ### 2.3 Accessibility settings
@@ -381,7 +386,7 @@ Request:
   "username": "star_hunter",
   "avatar": "avatar_03",
   "trophies": 520,
-  "league": "ORBIT_4",
+  "league": "ORBIT_3",
   "stats": {
     "matchesPlayed": 80,
     "wins": 50,
@@ -393,12 +398,10 @@ Request:
 }
 ```
 
-Never expose: email, credits, role, decks, time zone, or invite code.
+Never expose: email, Shards, role, decks, time zone, or invite code.
 Errors: 404 `PLAYER_NOT_FOUND`.
 
 ## 3. Open items
 
-- **Email verification:** Login is allowed before verification. Define which features remain unavailable until verification (for example, Ranked or pack purchases).
-- **Avatar:** The preset avatar set is confirmed; the `avatar` field is still missing from the current schema and requires a migration.
-- **Leagues:** Names and thresholds remain to be defined; the league is calculated from trophies.
+- **Leagues:** Orbit names remain to be defined; thresholds are set by the rules and the league is calculated from trophies.
 - **Rate limiting:** Thresholds and implementation are deferred to phase 2. Do not promise `429 TOO_MANY_REQUESTS` on authentication routes in v1.
