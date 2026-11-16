@@ -15,7 +15,7 @@ Draft derived from the functional context and the PostgreSQL schema in `docs/dat
 
 1. [Authentication and profile](01-auth-profile.md)
 2. [Cards, collection, and decks](02-cards-collection-decks.md)
-3. [Packs and credits](03-packs-credits.md)
+3. [Packs and Shards](03-packs-shards.md)
 4. [Trades](04-trades.md)
 5. [Battles and matchmaking](05-battles-matchmaking.md)
 6. [Friendships, notifications, and presence](06-social-notifications.md)
