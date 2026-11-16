@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Battle Viewer Document",
-  "description": "A self-contained battle record for replaying a match in the frontend viewer.",
+  "description": "A self-contained battle record for replaying a match in the frontend viewer. The server stores the player snapshots in battle.decks_snapshot and the events in battle.turn_log; the replay API rebuilds this document from those two columns and the battle row.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -19,13 +19,16 @@
       "const": "1.0"
     },
     "battleId": {
-      "type": "string",
-      "minLength": 1
+      "type": "integer",
+      "minimum": 1
     },
     "mode": {
       "type": "string",
-      "minLength": 1,
-      "description": "The game mode, for example RANKED, QUICK, or FRIEND."
+      "enum": [
+        "FRIEND",
+        "QUICK",
+        "RANKED"
+      ]
     },
     "rules": {
       "$ref": "#/$defs/rules"
@@ -87,7 +90,7 @@
           }
         ]
       },
-      "description": "Chronological event stream ordered by sequence. A turnNumber identifies a simultaneous round across the whole match; roundNumber is local to its clash."
+      "description": "Chronological event stream ordered by sequence. A card is identified by its side and its position in the shuffled deck."
     },
     "result": {
       "$ref": "#/$defs/result"
@@ -124,20 +127,18 @@
       "additionalProperties": false,
       "required": [
         "energyWinThreshold",
-        "survivorEnergyBonusPerCreature"
+        "endBonusPerCard"
       ],
       "properties": {
         "energyWinThreshold": {
           "type": "integer",
           "minimum": 1,
-          "default": 30,
-          "description": "The match ends when a player's energy reaches this value."
+          "description": "The match ends when a player's Energy reaches this value: 30 in FRIEND and RANKED, 20 in QUICK."
         },
-        "survivorEnergyBonusPerCreature": {
+        "endBonusPerCard": {
           "type": "integer",
           "minimum": 0,
-          "default": 1,
-          "description": "Configured energy bonus per remaining creature when a deck is exhausted."
+          "description": "Energy given at deck exhaustion for every card a player still has, the card in the Arena included."
         }
       }
     },
@@ -146,52 +147,44 @@
       "additionalProperties": false,
       "required": [
         "deckPosition",
-        "cardInstanceId",
-        "cardDefinitionId",
+        "cardId",
         "name",
-        "factionId",
+        "faction",
+        "rarity",
         "baseAttack",
-        "effectiveAttack",
         "baseDefense"
       ],
       "properties": {
         "deckPosition": {
           "type": "integer",
           "minimum": 0,
-          "description": "Zero-based position in this shuffled deck."
+          "maximum": 29,
+          "description": "Zero-based position in this shuffled deck. Together with the side, it identifies the card in the events."
         },
-        "cardInstanceId": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Unique identifier of this owned card instance."
-        },
-        "cardDefinitionId": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Identifier of the card definition, useful for catalog lookups."
+        "cardId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Catalog card id (card.id)."
         },
         "name": {
           "type": "string",
           "minLength": 1
         },
-        "factionId": {
-          "type": "string",
-          "minLength": 1
+        "faction": {
+          "$ref": "#/$defs/faction"
+        },
+        "rarity": {
+          "$ref": "#/$defs/rarity"
         },
         "baseAttack": {
           "type": "integer",
           "minimum": 1,
-          "description": "Card attack before faction effects."
-        },
-        "effectiveAttack": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Attack actually used in combat after faction effects."
+          "description": "Card ATK, without faction advantage."
         },
         "baseDefense": {
           "type": "integer",
           "minimum": 1,
-          "description": "Defense at the start of the battle, before taking damage."
+          "description": "Card DEF at the start of the battle."
         }
       }
     },
@@ -202,7 +195,6 @@
         "side",
         "playerId",
         "displayName",
-        "startingEnergy",
         "deckSnapshot"
       ],
       "properties": {
@@ -210,16 +202,12 @@
           "$ref": "#/$defs/side"
         },
         "playerId": {
-          "type": "string",
-          "minLength": 1
+          "type": "integer",
+          "minimum": 1
         },
         "displayName": {
           "type": "string",
           "minLength": 1
-        },
-        "startingEnergy": {
-          "type": "integer",
-          "minimum": 0
         },
         "deckSnapshot": {
           "type": "object",
@@ -238,11 +226,14 @@
               "items": {
                 "$ref": "#/$defs/cardSnapshot"
               },
-              "description": "Cards in their actual post-shuffle draw order."
+              "description": "Cards in their actual post-shuffle draw order.",
+              "minItems": 30,
+              "maxItems": 30
             }
           }
         }
-      }
+      },
+      "description": "Every player starts the battle with 0 Energy."
     },
     "eventBase": {
       "type": "object",
@@ -274,7 +265,6 @@
             "type",
             "clashNumber",
             "side",
-            "cardInstanceId",
             "deckPosition",
             "defenseAtDeployment"
           ],
@@ -293,10 +283,6 @@
             "side": {
               "$ref": "#/$defs/side"
             },
-            "cardInstanceId": {
-              "type": "string",
-              "minLength": 1
-            },
             "deckPosition": {
               "type": "integer",
               "minimum": 0
@@ -314,8 +300,9 @@
       "additionalProperties": false,
       "required": [
         "side",
-        "cardInstanceId",
+        "deckPosition",
         "attackUsed",
+        "advantageApplied",
         "defenseBefore",
         "damageTaken",
         "defenseAfter",
@@ -325,14 +312,19 @@
         "side": {
           "$ref": "#/$defs/side"
         },
-        "cardInstanceId": {
-          "type": "string",
-          "minLength": 1
+        "deckPosition": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 29
         },
         "attackUsed": {
           "type": "integer",
           "minimum": 1,
-          "description": "This card's effective attack, applied simultaneously to the opposing card."
+          "description": "This card's effective ATK: base ATK, plus the faction advantage when it applies."
+        },
+        "advantageApplied": {
+          "type": "boolean",
+          "description": "True when this card's faction prevails over the opposing card's faction."
         },
         "defenseBefore": {
           "type": "integer",
@@ -364,7 +356,6 @@
           "required": [
             "sequence",
             "type",
-            "turnNumber",
             "clashNumber",
             "roundNumber",
             "cards"
@@ -376,11 +367,6 @@
             },
             "type": {
               "const": "ROUND_RESOLVED"
-            },
-            "turnNumber": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "One-based round number across the entire match."
             },
             "clashNumber": {
               "type": "integer",
@@ -410,7 +396,7 @@
       "additionalProperties": false,
       "required": [
         "side",
-        "cardInstanceId",
+        "deckPosition",
         "finalDefense",
         "defeated"
       ],
@@ -418,9 +404,10 @@
         "side": {
           "$ref": "#/$defs/side"
         },
-        "cardInstanceId": {
-          "type": "string",
-          "minLength": 1
+        "deckPosition": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 29
         },
         "finalDefense": {
           "type": "integer"
@@ -529,7 +516,7 @@
             "type",
             "exhaustedSide",
             "remainingCardsBySide",
-            "bonusPerRemainingCreature",
+            "bonusPerCard",
             "bonusAwardedBySide",
             "energyAfter"
           ],
@@ -542,20 +529,25 @@
               "const": "DECK_EXHAUSTED"
             },
             "exhaustedSide": {
-              "$ref": "#/$defs/side",
-              "description": "The side that has no card available to deploy."
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "BOTH"
+              ],
+              "description": "The side that has to deploy a card and has none left; BOTH when both cards were defeated and both decks are empty."
             },
             "remainingCardsBySide": {
               "$ref": "#/$defs/energyBySide",
-              "description": "Number of undeployed creature cards remaining in each deck."
+              "description": "Cards each player still has: undeployed cards plus the card in the Arena, if it survived."
             },
-            "bonusPerRemainingCreature": {
+            "bonusPerCard": {
               "type": "integer",
               "minimum": 0
             },
             "bonusAwardedBySide": {
               "$ref": "#/$defs/energyBySide",
-              "description": "Energy bonus awarded to each side for its remaining creatures."
+              "description": "remainingCardsBySide multiplied by bonusPerCard."
             },
             "energyAfter": {
               "$ref": "#/$defs/energyBySide"
@@ -635,6 +627,30 @@
         }
       },
       "description": "Convenience summary matching the final BATTLE_FINISHED event."
+    },
+    "faction": {
+      "type": "string",
+      "enum": [
+        "Lava",
+        "Electro",
+        "Radio",
+        "Ice",
+        "Metal",
+        "Matte",
+        "Gem",
+        "Noble Gas"
+      ]
+    },
+    "rarity": {
+      "type": "string",
+      "enum": [
+        "Captive",
+        "Conscript",
+        "Soldier",
+        "Champion",
+        "Elect",
+        "Wanderer"
+      ]
     }
   }
 }
