@@ -9,6 +9,7 @@ import com.horizonglitch.wotv.common.PasswordRules;
 import com.horizonglitch.wotv.common.TimezoneRules;
 import com.horizonglitch.wotv.config.AppProperties;
 import com.horizonglitch.wotv.season.Orbit;
+import com.horizonglitch.wotv.trade.TradeService;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -28,18 +29,21 @@ public class ProfileService {
 	private final AvatarRepository avatars;
 	private final BattleStatsService battleStats;
 	private final TokenService tokenService;
+	private final TradeService tradeService;
 	private final PasswordEncoder passwordEncoder;
 	private final AppProperties properties;
 	private final Clock clock;
 
 	public ProfileService(PlayerRepository players, PlayerSettingsRepository settings, AvatarRepository avatars,
-			BattleStatsService battleStats, TokenService tokenService, PasswordEncoder passwordEncoder,
+			BattleStatsService battleStats, TokenService tokenService, TradeService tradeService,
+			PasswordEncoder passwordEncoder,
 			AppProperties properties, Clock clock) {
 		this.players = players;
 		this.settings = settings;
 		this.avatars = avatars;
 		this.battleStats = battleStats;
 		this.tokenService = tokenService;
+		this.tradeService = tradeService;
 		this.passwordEncoder = passwordEncoder;
 		this.properties = properties;
 		this.clock = clock;
@@ -125,7 +129,7 @@ public class ProfileService {
 
 	/**
 	 * Soft delete: the row stays so battles and trades keep their history, but username and email are
-	 * anonymised, every token is invalidated and the player is no longer attackable.
+	 * anonymised, every token is invalidated, pending trades are cancelled and the player is no longer attackable.
 	 */
 	@Transactional
 	public void delete(long playerId, ProfileRequests.DeleteAccount request) {
@@ -136,6 +140,7 @@ public class ProfileService {
 		player.setUsername("deleted_" + player.getId());
 		player.setEmail("deleted_" + player.getId() + "@deleted.invalid");
 		player.setDefenseDeck(null);
+		tradeService.cancelAllPending(player);
 		for (TokenType type : TokenType.values()) {
 			tokenService.revokeAll(player, type);
 		}

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Settings under {@code app.*} in application.properties. */
 @ConfigurationProperties("app")
-public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens tokens, Economy economy, Decks decks, Packs packs) {
+public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens tokens, Economy economy, Decks decks, Packs packs, Trades trades) {
 
 	public record Cors(List<String> allowedOrigins) {
 	}
@@ -25,6 +25,13 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 	 */
 	public record Packs(int championPacks, int electPacks, int wandererPacks, String championRarity,
 			String electRarity, String wandererRarity) {
+	}
+
+	/**
+	 * Trades (rules/trades.md): a proposal lasts {@code expiry} (TRADE_EXPIRY_HOURS) and nobody can be left with
+	 * fewer than {@code minCollectionSize} permanent cards (MIN_COLLECTION_SIZE).
+	 */
+	public record Trades(java.time.Duration expiry, int minCollectionSize) {
 	}
 
 	/** Deck limits of rules/decks.md: DECK_SIZE, MAX_PER_FACTION and MAX_SAVED_DECKS. */

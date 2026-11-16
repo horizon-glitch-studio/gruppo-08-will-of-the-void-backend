@@ -40,3 +40,14 @@ Proposed specific errors:
 A trade can hold any number of cards on each side, and one side can be empty (a gift); every trade moves at least one card. Self-trading is forbidden.
 
 The other party is notified when a trade is received and when it reaches a final status (accepted, rejected, cancelled, expired, failed).
+
+## Implemented behaviour
+
+- **`TRADE_INVALID_CARDS`** lists every problem in `fieldErrors`: `TRADE_WITH_SELF`, `TRADE_EMPTY`, `CARD_DUPLICATED`, `CARD_ON_BOTH_SIDES` (the same card offered and requested), `QUANTITY_INVALID`, `CARD_NOT_FOUND`, `CARD_NOT_TRADEABLE`.
+- **Ownership** is not checked at proposal (TRADE-10): the same copy can be offered to several players.
+- **Acceptance** checks, in order: the trade is pending and not expired (`TRADE_NOT_PENDING`), the recipient's email is verified (`EMAIL_NOT_VERIFIED`), both players still own every card (`TRADE_FAILED`, and the trade is saved as `FAILED`), nobody is left with fewer than 30 permanent cards (`TRADE_MIN_COLLECTION`, the trade stays pending). Wanderer cards and archived cards do not count towards the 30.
+- **`TRADE_NOT_PENDING`** puts the current status in `details.status`. A trade past its deadline is expired as soon as someone acts on it, even before the expiry job runs; a job also expires old proposals every minute.
+- **A pending trade past its deadline** does not block a new proposal between the same players: it is expired first.
+- **`GET /trades`** is paginated, newest first; `direction` other than `incoming` or `outgoing` is 400 `VALIDATION_FAILED` with `DIRECTION_INVALID`.
+- **Notifications**: `TRADE_RECEIVED` to the recipient; `TRADE_ACCEPTED`, `TRADE_REJECTED`, `TRADE_FAILED` to the proposer; `TRADE_CANCELLED` to the recipient; `TRADE_EXPIRED` to both. A player whose deck becomes invalid after the trade gets `DECK_INVALID`.
+- **Deleting an account** cancels its pending trades and notifies the other players.

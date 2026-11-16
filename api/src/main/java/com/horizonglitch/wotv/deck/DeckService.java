@@ -146,6 +146,23 @@ public class DeckService {
 		}
 	}
 
+	/**
+	 * Recomputes the status of every deck of the player after their collection changed (TRADE-13, DECK-08).
+	 * Returns true when a deck has just become INVALID, so the caller can notify the player.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public boolean recheckAll(Player player) {
+		boolean newlyInvalid = false;
+		for (Deck deck : decks.findByPlayer_IdOrderById(player.getId())) {
+			DeckStatus status = check(deck, player.getId()).status();
+			if (status != deck.getStatus()) {
+				newlyInvalid |= status == DeckStatus.INVALID;
+				deck.setStatus(status);
+			}
+		}
+		return newlyInvalid;
+	}
+
 	/** Checks a composition without saving it; cards not owned are reported as rules broken. */
 	@Transactional(readOnly = true)
 	public DeckResponses.ValidationView validate(long playerId, DeckRequests.Validate request) {

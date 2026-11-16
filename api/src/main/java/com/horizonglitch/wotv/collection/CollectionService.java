@@ -98,12 +98,8 @@ public class CollectionService {
 		Integer days = card.getRarity().getDurationDays();
 
 		if (days == null) {
-			if (owned != null) {
-				owned.setQuantity(owned.getQuantity() + quantity);
-				return new Added(false, null);
-			}
-			collection.save(newCard(player, card, quantity, now, null));
-			return new Added(true, null);
+			collection.addPermanent(player.getId(), card.getId(), quantity, now);
+			return new Added(owned == null, null);
 		}
 
 		Duration stay = Duration.ofDays((long) days * quantity);
@@ -142,6 +138,44 @@ public class CollectionService {
 		owned.setAcquiredAt(now);
 		owned.setExpiresAt(expiresAt);
 		return owned;
+	}
+
+	/**
+	 * Locks the collection rows of the cards of a trade for both players and returns the copies owned, by player
+	 * and card. Rows not found mean 0 copies.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Map<Long, Map<Long, Integer>> lockForTrade(long firstPlayerId, long secondPlayerId, Collection<Long> cardIds) {
+		Map<Long, Map<Long, Integer>> owned = new java.util.HashMap<>();
+		owned.put(firstPlayerId, new java.util.HashMap<>());
+		owned.put(secondPlayerId, new java.util.HashMap<>());
+		long first = Math.min(firstPlayerId, secondPlayerId);
+		long second = Math.max(firstPlayerId, secondPlayerId);
+		for (Object[] row : collection.lockRows(first, second, cardIds)) {
+			owned.get(((Number) row[0]).longValue()).put(((Number) row[1]).longValue(), ((Number) row[2]).intValue());
+		}
+		return owned;
+	}
+
+	/** Permanent copies owned, the count of the minimum collection rule (TRADE-12). */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public int countPermanent(long playerId) {
+		return collection.countPermanent(playerId);
+	}
+
+	/**
+	 * Moves permanent copies from one player to another with atomic statements. The caller holds the row locks
+	 * and has checked the copies, so this never fails halfway.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void transfer(long fromPlayerId, long toPlayerId, long cardId, int quantity, int ownedBefore) {
+		int removed = ownedBefore == quantity
+				? collection.removeAll(fromPlayerId, cardId, quantity)
+				: collection.removeSome(fromPlayerId, cardId, quantity);
+		if (removed != 1) {
+			throw new IllegalStateException("Card " + cardId + " changed while locked");
+		}
+		collection.addPermanent(toPlayerId, cardId, quantity, clock.instant());
 	}
 
 	/** The copies the player owns of the given cards, by card id; cards not owned are missing from the map. */
