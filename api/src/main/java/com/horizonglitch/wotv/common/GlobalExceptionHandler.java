@@ -3,6 +3,7 @@ package com.horizonglitch.wotv.common;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -30,7 +31,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(ApiException.class)
 	public ResponseEntity<ApiError> handleApi(ApiException e, HttpServletRequest request) {
-		return build(e.getStatus(), e.getCode(), e.getMessage(), request, e.getFieldErrors());
+		return build(e.getStatus(), e.getCode(), e.getMessage(), request, e.getFieldErrors(), e.getDetails());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
@@ -74,8 +75,13 @@ public class GlobalExceptionHandler {
 
 	private ResponseEntity<ApiError> build(HttpStatus status, String code, String message, HttpServletRequest request,
 			List<ApiError.FieldErrorItem> fieldErrors) {
+		return build(status, code, message, request, fieldErrors, Map.of());
+	}
+
+	private ResponseEntity<ApiError> build(HttpStatus status, String code, String message, HttpServletRequest request,
+			List<ApiError.FieldErrorItem> fieldErrors, Map<String, Object> details) {
 		ApiError body = new ApiError(clock.instant(), status.value(), status.getReasonPhrase(), code, message,
-				request.getRequestURI(), fieldErrors);
+				request.getRequestURI(), fieldErrors, details);
 		return ResponseEntity.status(status).body(body);
 	}
 }

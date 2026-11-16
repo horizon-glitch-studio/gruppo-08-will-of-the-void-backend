@@ -36,6 +36,7 @@ Confirmed decisions are stated as contract rules. Only the items listed at the e
 | `message` | String | English description for developers, not for display to players |
 | `path` | String | Requested route |
 | `fieldErrors` | Array | Only for validation 400 responses. Each item is `{ "field": "...", "code": "..." }`; otherwise `[]` |
+| `details` | Object | Only for errors that carry extra values, such as `shardBalance` and `shardCost` for `INSUFFICIENT_SHARDS`; missing otherwise |
 
 Example validation 400:
 

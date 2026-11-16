@@ -37,3 +37,12 @@ Shard transaction types: `INVITE_BONUS`, `REGISTRATION_BONUS`, `DAILY_BONUS`, `C
 There are no purchase limits. Opening and transaction histories are kept for the lifetime of the account.
 
 Proposed specific errors: `PACK_NOT_FOUND` 404, `PACK_NOT_AVAILABLE` 409, `INSUFFICIENT_SHARDS` 409 (include `shardBalance` and `shardCost`), `PACK_OPENING_FAILED` 500. Repeating the same request could charge twice: support `Idempotency-Key` for purchases.
+
+## Implemented behaviour
+
+- **`GET /packs`** lists the active pack types on sale now: standard packs always, an event pack only between `availableFrom` and `availableUntil`. Each pack has `slots` (position and rarity odds in percent), `guarantees` (`CHAMPION` every 10 packs, plus `ELECT` every 50 for standard packs or `WANDERER` every 50 for event packs) and, for an event, its Wanderer cards in `eventCards`. **`GET /packs/{id}`** also returns a pack not on sale, with `available: false`.
+- **Opening response.** `id`, `pack` (`id`, `name`, `kind`), `shardsSpent`, `shardBalance` after the purchase, `guarantee` (the guarantee that replaced the last card, or `null` when luck was enough), `cards` (one item per card with `quantity`, `expiresAt` for Wanderers and `isNew`) and `createdAt`.
+- **Errors.** `INSUFFICIENT_SHARDS` puts `shardBalance` and `shardCost` in the `details` object of the error. `PACK_OPENING_FAILED` means a rarity of the pack has no card to draw: nothing is charged. `GET /users/me/pack-openings/{id}` of another player, or that does not exist, is 404 `PACK_OPENING_NOT_FOUND`.
+- **Concurrency.** Opening locks the player's guarantee counters, so two packs of the same player are drawn one after the other and cannot both use or both miss a guarantee.
+- **Not implemented yet.** `Idempotency-Key`: the schema has no table to remember keys. A repeated request buys a second pack.
+- **Shard transactions** are sorted newest first; each item has `id`, `amount` (negative for purchases), `reason`, `packOpeningId`, `invitedPlayerId`, `seasonId`, `orbit` and `createdAt`.
