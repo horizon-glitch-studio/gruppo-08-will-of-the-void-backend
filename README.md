@@ -19,9 +19,35 @@ Maven multi-module project:
 | Module | Content |
 | --- | --- |
 | [`engine`](engine) | Game engine in plain Java with JUnit tests. It has no dependency on Spring or the database, and a test fails the build if one is added. |
-| [`api`](api) | Spring Boot REST API: entities, repositories, security, controllers and Flyway migrations. It depends on `engine`. |
+| [`api`](api) | Spring Boot REST API: entities, repositories, services, controllers, security and Flyway migrations. It depends on `engine`. |
 
 Run `./mvnw test` from the repository root to build and test both modules (the `api` tests need PostgreSQL, see below).
+
+The engine is a library, not a separate service: it receives the two decks and a seed and returns the result and the turn-by-turn log, so `api` calls it directly. This meets the brief's isolated, JUnit-tested component without a second process to deploy.
+
+### Packages of the `api` module
+
+The code under `com.horizonglitch.wotv` is organised by feature, not by layer: each package holds the entities, repositories, services, controllers and DTOs of one area, so a feature is read and changed in one place. Each package has a `package-info.java` that lists its tables and its API contract in [`api-contract-draft`](api-contract-draft).
+
+| Package | Area |
+| --- | --- |
+| `auth` | Registration, login, JWT refresh, email verification, password reset |
+| `player` | Profile, avatar, time zone, settings |
+| `shard` | Shard balance and bonuses |
+| `notification` | Notifications |
+| `card` | Catalog: factions, advantages, rarities, cards, starter deck |
+| `collection` | Owned cards and departed Wanderers |
+| `deck` | Decks, validation, defense deck |
+| `pack` | Pack types, events, openings, guarantees |
+| `trade` | Trades |
+| `battle` | Battles, challenge requests, rematches, replays (calls `engine`) |
+| `matchmaking` | Opponent lists, attack limits, shield |
+| `social` | Friendships |
+| `season` | Seasons, reset, Orbits, leaderboard |
+| `backoffice` | Administration endpoints (ADMIN role) |
+| `security`, `config`, `common` | Security and JWT, configuration, shared error handling and pagination |
+
+Inside a package, classes are named after their role: `Deck` (entity), `DeckRepository`, `DeckService`, `DeckController`, `CreateDeckRequest` and `DeckResponse` (DTOs, Java records). A package may use another package's services, never its repositories.
 
 ## Getting Started
 
