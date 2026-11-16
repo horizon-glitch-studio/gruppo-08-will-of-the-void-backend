@@ -84,6 +84,15 @@ public class CatalogService {
 		return cards.findAllById(ids).stream().collect(Collectors.toMap(Card::getId, Function.identity()));
 	}
 
+	/** Ids of the active cards of a rarity: the cards a pack slot can give. */
+	public List<Long> activeCardIdsOfRarity(int rarityId) {
+		return cards.findActiveIdsByRarity(rarityId);
+	}
+
+	public java.util.Optional<Rarity> rarityNamed(String name) {
+		return rarities.findByName(name);
+	}
+
 	public static ApiException cardNotFound() {
 		return new ApiException(HttpStatus.NOT_FOUND, "CARD_NOT_FOUND", "The card does not exist.");
 	}

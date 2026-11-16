@@ -1,14 +1,21 @@
 package com.horizonglitch.wotv.shard;
 
+import com.horizonglitch.wotv.common.ApiException;
+import com.horizonglitch.wotv.common.PageResponse;
+import com.horizonglitch.wotv.common.Paging;
 import com.horizonglitch.wotv.config.AppProperties;
 import com.horizonglitch.wotv.notification.NotificationService;
 import com.horizonglitch.wotv.notification.NotificationType;
+import com.horizonglitch.wotv.pack.PackOpening;
 import com.horizonglitch.wotv.player.Player;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Map;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,6 +74,40 @@ public class ShardService {
 		grant(lockedPlayer, ShardReason.DAILY_BONUS, daily);
 		lockedPlayer.setLastDailyBonusAt(now);
 		return new LoginBonuses(daily, comeback);
+	}
+
+	/**
+	 * Charges the pack with an atomic update that never takes the balance below 0, and records the PACK_PURCHASE
+	 * row linked to the opening. Throws 409 INSUFFICIENT_SHARDS, with balance and cost, when the balance is too
+	 * low: the caller's transaction is rolled back.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void chargePack(Player player, PackOpening opening, int cost) {
+		if (transactions.addToBalance(player.getId(), -cost) == 0) {
+			int balance = transactions.balanceOf(player.getId());
+			throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_SHARDS", "Not enough Shards to buy this pack.",
+					Map.of("shardBalance", balance, "shardCost", cost));
+		}
+		ShardTransaction transaction = new ShardTransaction();
+		transaction.setPlayer(player);
+		transaction.setReason(ShardReason.PACK_PURCHASE);
+		transaction.setAmount(-cost);
+		transaction.setPackOpening(opening);
+		transactions.save(transaction);
+	}
+
+	/** The balance in the database, which the Player entity does not follow (see Player). */
+	@Transactional(readOnly = true)
+	public int balanceOf(long playerId) {
+		return transactions.balanceOf(playerId);
+	}
+
+	/** Every Shard income and expense of the player, the most recent first. */
+	@Transactional(readOnly = true)
+	public PageResponse<ShardResponses.Transaction> history(long playerId, Integer page, Integer size) {
+		return PageResponse.of(transactions.findByPlayer_Id(playerId,
+				Paging.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")))),
+				ShardResponses.Transaction::of);
 	}
 
 	private void grant(Player player, ShardReason reason, int amount) {

@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.Instant;
-import org.hibernate.annotations.CreationTimestamp;
 import com.horizonglitch.wotv.card.Card;
 import com.horizonglitch.wotv.player.Player;
 
@@ -33,8 +32,8 @@ public class CollectionCard {
 	@Column(nullable = false)
 	private int quantity;
 
-	@CreationTimestamp
-	@Column(name = "acquired_at", nullable = false, updatable = false)
+	/** Arrival on board: a Wanderer that comes back after leaving gets a new arrival time. */
+	@Column(name = "acquired_at", nullable = false)
 	private Instant acquiredAt;
 
 	/** Departure of a Wanderer; empty for permanent cards. */
