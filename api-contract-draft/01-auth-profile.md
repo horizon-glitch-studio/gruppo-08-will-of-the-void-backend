@@ -65,12 +65,13 @@ Example validation 400:
 | `PLAYER_NOT_FOUND` | 404 | Profile does not exist or account was deleted |
 | `USERNAME_ALREADY_USED` | 409 | Username is already in use |
 | `EMAIL_ALREADY_USED` | 409 | Email is already in use |
+| `TIMEZONE_CHANGE_TOO_SOON` | 409 | The time zone was changed less than 30 days ago |
 | `INVITE_CODE_INVALID` | 400 | Invite code does not exist |
 | `ACTION_TOKEN_INVALID` | 400 | Email verification or password reset token is incorrect, expired, or already used |
 | `TOO_MANY_REQUESTS` | 429 | Code reserved for rate limiting, deferred to phase 2; not part of v1 outcomes |
 | `INTERNAL_ERROR` | 500 | Server error |
 
-`fieldErrors[].code` values for username and password: `USERNAME_TOO_SHORT`, `USERNAME_TOO_LONG`, `USERNAME_INVALID_CHARACTERS`, `USERNAME_RESERVED`, `PASSWORD_TOO_SHORT`, `PASSWORD_TOO_LONG`, `EMAIL_INVALID`, `TIMEZONE_INVALID`.
+`fieldErrors[].code` values: `FIELD_REQUIRED` (a required field is missing or blank), `USERNAME_TOO_SHORT`, `USERNAME_TOO_LONG`, `USERNAME_INVALID_CHARACTERS`, `USERNAME_RESERVED`, `PASSWORD_TOO_SHORT`, `PASSWORD_TOO_LONG`, `EMAIL_INVALID`, `TIMEZONE_INVALID`, `AVATAR_INVALID`.
 
 ## 1. Authentication
 
@@ -315,7 +316,7 @@ Request (all fields are optional; send only the fields to change):
 ```
 
 **200 OK** response: same object as `GET /users/me`.
-Errors: 400 `VALIDATION_FAILED` (unknown avatar or invalid time zone), 401 `TOKEN_INVALID`, 409 `TIMEZONE_CHANGE_TOO_SOON` (time zone changed less than 30 days ago).
+Errors: 400 `VALIDATION_FAILED` (`AVATAR_INVALID` for an unknown or inactive avatar, `TIMEZONE_INVALID`), 401 `TOKEN_INVALID`, 409 `TIMEZONE_CHANGE_TOO_SOON` (time zone changed less than 30 days ago). Sending the current time zone again changes nothing and does not count as a change.
 Username and email **cannot** be changed in v1.
 
 ### 2.3 Accessibility settings
@@ -332,7 +333,7 @@ Correspond to the `player_settings` table.
 {
   "reduceMotion": false,
   "reduceTransparency": false,
-  "showTypeLabels": false
+  "showTextLabels": false
 }
 ```
 
@@ -353,7 +354,7 @@ Request:
 }
 ```
 
-**204 No Content** response. The player's other refresh tokens are invalidated.
+**204 No Content** response. All of the player's refresh tokens are invalidated, so every device has to log in again; the access token in use stays valid until it expires.
 Errors: 400 `VALIDATION_FAILED`, 401 `INVALID_CREDENTIALS` (incorrect current password).
 
 ### 2.5 Delete account

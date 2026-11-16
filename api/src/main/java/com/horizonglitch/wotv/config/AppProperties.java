@@ -25,6 +25,7 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 			int registrationBonusMultiplier,
 			int comebackBonusMultiplier,
 			int comebackAbsenceDays,
-			int comebackIntervalDays) {
+			int comebackIntervalDays,
+			int timezoneChangeDays) {
 	}
 }
