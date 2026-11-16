@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -161,6 +162,37 @@ public class DeckService {
 			}
 		}
 		return newlyInvalid;
+	}
+
+	/**
+	 * The deck of the player, if it is VALID right now: the deck a Summoner attacks or accepts a challenge with.
+	 * The status is recomputed, so a deck broken by a trade or a departed Wanderer is refused (DECK-07).
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Deck requireValid(long playerId, long deckId) {
+		Deck deck = owned(playerId, deckId);
+		if (currentStatus(deck, playerId) != DeckStatus.VALID) {
+			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "DECK_INVALID", "The deck is not valid.");
+		}
+		return deck;
+	}
+
+	/** The defense deck of the player, only if it is VALID right now: an invalid one cannot defend (DECK-15). */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Optional<Deck> validDefenseDeck(Player player) {
+		Deck deck = player.getDefenseDeck();
+		if (deck == null || currentStatus(deck, player.getId()) != DeckStatus.VALID) {
+			return Optional.empty();
+		}
+		return Optional.of(deck);
+	}
+
+	private DeckStatus currentStatus(Deck deck, long playerId) {
+		DeckStatus status = check(deck, playerId).status();
+		if (deck.getStatus() != status) {
+			deck.setStatus(status);
+		}
+		return status;
 	}
 
 	/** Checks a composition without saving it; cards not owned are reported as rules broken. */

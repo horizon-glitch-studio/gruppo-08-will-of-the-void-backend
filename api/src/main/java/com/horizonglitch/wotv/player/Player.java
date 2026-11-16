@@ -11,7 +11,7 @@ import com.horizonglitch.wotv.deck.Deck;
 
 /** A Summoner's account.
  *
- * <p>{@code shardBalance} and {@code trophies} are read-only here: they change only with atomic UPDATE
+ * <p>{@code shardBalance}, {@code trophies} and {@code protectedUntil} are read-only here: they change only with atomic UPDATE
  * statements, because other players' requests change them too (see docs/database/database-schema.md). */
 @Entity
 @Table(name = "player")
@@ -70,8 +70,12 @@ public class Player {
 	@Column(name = "timezone_changed_at")
 	private Instant timezoneChangedAt;
 
-	/** End of the shield after 5 Ranked attacks received in 24 hours. */
-	@Column(name = "protected_until")
+	/**
+	 * End of the shield after 5 Ranked attacks received in 24 hours. Read-only here, like the trophies: it is set
+	 * by the attacks of other players, with atomic UPDATE statements.
+	 */
+	@Setter(AccessLevel.NONE)
+	@Column(name = "protected_until", insertable = false, updatable = false)
 	private Instant protectedUntil;
 
 	@Column(name = "invite_code", nullable = false, unique = true, length = 20)
