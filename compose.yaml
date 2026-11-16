@@ -19,6 +19,9 @@ services:
       retries: 5
 
   backend:
+    # Started only with --profile app, so that Spring Boot's Docker Compose support
+    # starts just the database when the API is run from the IDE.
+    profiles: ["app"]
     build:
       context: .
       dockerfile: api/Dockerfile
