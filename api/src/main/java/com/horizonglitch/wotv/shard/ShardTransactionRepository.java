@@ -1,12 +1,19 @@
 package com.horizonglitch.wotv.shard;
 
 import java.time.Instant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ShardTransactionRepository extends JpaRepository<ShardTransaction, Long> {
+
+	Page<ShardTransaction> findByPlayer_Id(Long playerId, Pageable pageable);
+
+	@Query(value = "SELECT shard_balance FROM player WHERE id = :playerId", nativeQuery = true)
+	int balanceOf(@Param("playerId") Long playerId);
 
 	boolean existsByPlayer_IdAndReasonAndCreatedAtAfter(Long playerId, ShardReason reason, Instant after);
 

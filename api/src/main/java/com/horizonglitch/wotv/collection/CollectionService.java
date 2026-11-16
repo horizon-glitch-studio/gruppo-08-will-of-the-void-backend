@@ -1,11 +1,13 @@
 package com.horizonglitch.wotv.collection;
 
+import com.horizonglitch.wotv.card.Card;
 import com.horizonglitch.wotv.card.StarterDeckCard;
 import com.horizonglitch.wotv.common.ApiException;
 import com.horizonglitch.wotv.common.PageResponse;
 import com.horizonglitch.wotv.common.Paging;
 import com.horizonglitch.wotv.player.Player;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -41,6 +43,7 @@ public class CollectionService {
 			card.setPlayer(player);
 			card.setCard(starter.getCard());
 			card.setQuantity(starter.getQuantity());
+			card.setAcquiredAt(clock.instant());
 			collection.save(card);
 		}
 	}
@@ -81,6 +84,64 @@ public class CollectionService {
 		return PageResponse.of(archive.findByPlayer_Id(playerId,
 				Paging.of(page, size, Sort.by(Sort.Direction.DESC, "departedAt").and(Sort.by("id")))),
 				CollectionResponses.ArchiveItem::of);
+	}
+
+	/**
+	 * Adds the cards drawn from a pack. A permanent card adds copies. A card with a limited stay (a Wanderer) is
+	 * always one copy: still on board, its stay is extended (CARD-13); not on board, it arrives with a full period
+	 * (CARD-14), and a stay already ended but not archived yet is archived first.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Added addFromPack(Player player, Card card, int quantity) {
+		Instant now = clock.instant();
+		CollectionCard owned = collection.findById_PlayerIdAndId_CardId(player.getId(), card.getId()).orElse(null);
+		Integer days = card.getRarity().getDurationDays();
+
+		if (days == null) {
+			if (owned != null) {
+				owned.setQuantity(owned.getQuantity() + quantity);
+				return new Added(false, null);
+			}
+			collection.save(newCard(player, card, quantity, now, null));
+			return new Added(true, null);
+		}
+
+		Duration stay = Duration.ofDays((long) days * quantity);
+		if (owned != null && owned.getExpiresAt().isAfter(now)) {
+			owned.setExpiresAt(owned.getExpiresAt().plus(stay));
+			return new Added(false, owned.getExpiresAt());
+		}
+		if (owned != null) {
+			archiveStay(owned);
+			owned.setAcquiredAt(now);
+			owned.setExpiresAt(now.plus(stay));
+			return new Added(true, owned.getExpiresAt());
+		}
+		CollectionCard arrived = collection.save(newCard(player, card, 1, now, now.plus(stay)));
+		return new Added(true, arrived.getExpiresAt());
+	}
+
+	/** {@code isNew} is true when the card was not on board before; {@code expiresAt} is null for permanent cards. */
+	public record Added(boolean isNew, Instant expiresAt) {
+	}
+
+	private void archiveStay(CollectionCard ended) {
+		MemoryArchive stay = new MemoryArchive();
+		stay.setPlayer(ended.getPlayer());
+		stay.setCard(ended.getCard());
+		stay.setArrivedAt(ended.getAcquiredAt());
+		stay.setDepartedAt(ended.getExpiresAt());
+		archive.save(stay);
+	}
+
+	private static CollectionCard newCard(Player player, Card card, int quantity, Instant now, Instant expiresAt) {
+		CollectionCard owned = new CollectionCard();
+		owned.setPlayer(player);
+		owned.setCard(card);
+		owned.setQuantity(quantity);
+		owned.setAcquiredAt(now);
+		owned.setExpiresAt(expiresAt);
+		return owned;
 	}
 
 	/** The copies the player owns of the given cards, by card id; cards not owned are missing from the map. */
