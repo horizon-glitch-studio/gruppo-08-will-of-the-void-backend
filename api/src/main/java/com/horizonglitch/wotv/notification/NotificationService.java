@@ -1,6 +1,7 @@
 package com.horizonglitch.wotv.notification;
 
 import com.horizonglitch.wotv.player.Player;
+import com.horizonglitch.wotv.trade.Trade;
 import org.springframework.stereotype.Service;
 
 /** Creates the notifications shown when the Summoner comes back. */
@@ -18,6 +19,15 @@ public class NotificationService {
 		Notification notification = new Notification();
 		notification.setPlayer(player);
 		notification.setType(type);
+		return notifications.save(notification);
+	}
+
+	/** A notification about a trade: received, accepted, rejected, cancelled, expired or failed. */
+	public Notification notifyTrade(Player player, NotificationType type, Trade trade) {
+		Notification notification = new Notification();
+		notification.setPlayer(player);
+		notification.setType(type);
+		notification.setTrade(trade);
 		return notifications.save(notification);
 	}
 }

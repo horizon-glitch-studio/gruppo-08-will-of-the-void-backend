@@ -67,6 +67,10 @@ public class PlayerService {
 		return players.findActiveByUsername(identifier).or(() -> players.findActiveByEmail(identifier));
 	}
 
+	public Optional<Player> findActiveByUsername(String username) {
+		return players.findActiveByUsername(username);
+	}
+
 	public Optional<Player> findActiveByEmail(String email) {
 		return players.findActiveByEmail(email);
 	}
