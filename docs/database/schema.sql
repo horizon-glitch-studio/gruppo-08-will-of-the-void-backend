@@ -81,8 +81,8 @@ CREATE TABLE "faction" (
 CREATE TABLE "faction_advantage" (
   "dominant_faction_id" int NOT NULL,
   "dominated_faction_id" int NOT NULL,
-  "type" varchar(8) NOT NULL CHECK (type IN ('ATTACK', 'DEFENSE')),
-  "value" int NOT NULL CHECK (value > 0) DEFAULT 2,
+  "type" varchar(8) NOT NULL CHECK (type = 'ATTACK'),
+  "value" int NOT NULL CHECK (value > 0) DEFAULT 3,
   CONSTRAINT "chk_advantage_different_factions" CHECK (dominant_faction_id <> dominated_faction_id),
   PRIMARY KEY ("dominant_faction_id", "dominated_faction_id"),
   FOREIGN KEY ("dominant_faction_id") REFERENCES "faction" ("id") DEFERRABLE INITIALLY IMMEDIATE,
