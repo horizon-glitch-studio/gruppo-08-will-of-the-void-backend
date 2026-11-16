@@ -1,0 +1,3258 @@
+{
+  "schemaVersion": "1.0",
+  "battleId": 5002,
+  "mode": "RANKED",
+  "rules": {
+    "energyWinThreshold": 30,
+    "endBonusPerCard": 4
+  },
+  "players": [
+    {
+      "side": "A",
+      "playerId": 101,
+      "displayName": "star_hunter",
+      "deckSnapshot": {
+        "shuffleApplied": true,
+        "cards": [
+          {
+            "deckPosition": 0,
+            "cardId": 14,
+            "name": "Lava Conscript 2",
+            "faction": "Lava",
+            "rarity": "Conscript",
+            "baseAttack": 8,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 1,
+            "cardId": 26,
+            "name": "Lava Soldier 2",
+            "faction": "Lava",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 2,
+            "cardId": 49,
+            "name": "Gem Elect 1",
+            "faction": "Gem",
+            "rarity": "Elect",
+            "baseAttack": 14,
+            "baseDefense": 14
+          },
+          {
+            "deckPosition": 3,
+            "cardId": 38,
+            "name": "Lava Champion 2",
+            "faction": "Lava",
+            "rarity": "Champion",
+            "baseAttack": 10,
+            "baseDefense": 14
+          },
+          {
+            "deckPosition": 4,
+            "cardId": 34,
+            "name": "Metal Soldier 2",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 5,
+            "cardId": 25,
+            "name": "Lava Soldier 1",
+            "faction": "Lava",
+            "rarity": "Soldier",
+            "baseAttack": 8,
+            "baseDefense": 12
+          },
+          {
+            "deckPosition": 6,
+            "cardId": 1,
+            "name": "Lava Captive 1",
+            "faction": "Lava",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 7,
+            "cardId": 26,
+            "name": "Lava Soldier 2",
+            "faction": "Lava",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 8,
+            "cardId": 25,
+            "name": "Lava Soldier 1",
+            "faction": "Lava",
+            "rarity": "Soldier",
+            "baseAttack": 8,
+            "baseDefense": 12
+          },
+          {
+            "deckPosition": 9,
+            "cardId": 33,
+            "name": "Metal Soldier 1",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 9,
+            "baseDefense": 11
+          },
+          {
+            "deckPosition": 10,
+            "cardId": 13,
+            "name": "Lava Conscript 1",
+            "faction": "Lava",
+            "rarity": "Conscript",
+            "baseAttack": 7,
+            "baseDefense": 9
+          },
+          {
+            "deckPosition": 11,
+            "cardId": 51,
+            "name": "Noble Gas Wanderer 1",
+            "faction": "Noble Gas",
+            "rarity": "Wanderer",
+            "baseAttack": 14,
+            "baseDefense": 18
+          },
+          {
+            "deckPosition": 12,
+            "cardId": 10,
+            "name": "Metal Captive 2",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 13,
+            "cardId": 10,
+            "name": "Metal Captive 2",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 14,
+            "cardId": 21,
+            "name": "Metal Conscript 1",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 9,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 15,
+            "cardId": 46,
+            "name": "Metal Champion 2",
+            "faction": "Metal",
+            "rarity": "Champion",
+            "baseAttack": 11,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 16,
+            "cardId": 2,
+            "name": "Lava Captive 2",
+            "faction": "Lava",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 17,
+            "cardId": 2,
+            "name": "Lava Captive 2",
+            "faction": "Lava",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 18,
+            "cardId": 14,
+            "name": "Lava Conscript 2",
+            "faction": "Lava",
+            "rarity": "Conscript",
+            "baseAttack": 8,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 19,
+            "cardId": 33,
+            "name": "Metal Soldier 1",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 9,
+            "baseDefense": 11
+          },
+          {
+            "deckPosition": 20,
+            "cardId": 9,
+            "name": "Metal Captive 1",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 21,
+            "cardId": 1,
+            "name": "Lava Captive 1",
+            "faction": "Lava",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 22,
+            "cardId": 13,
+            "name": "Lava Conscript 1",
+            "faction": "Lava",
+            "rarity": "Conscript",
+            "baseAttack": 7,
+            "baseDefense": 9
+          },
+          {
+            "deckPosition": 23,
+            "cardId": 9,
+            "name": "Metal Captive 1",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 24,
+            "cardId": 21,
+            "name": "Metal Conscript 1",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 9,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 25,
+            "cardId": 13,
+            "name": "Lava Conscript 1",
+            "faction": "Lava",
+            "rarity": "Conscript",
+            "baseAttack": 7,
+            "baseDefense": 9
+          },
+          {
+            "deckPosition": 26,
+            "cardId": 22,
+            "name": "Metal Conscript 2",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 6,
+            "baseDefense": 10
+          },
+          {
+            "deckPosition": 27,
+            "cardId": 22,
+            "name": "Metal Conscript 2",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 6,
+            "baseDefense": 10
+          },
+          {
+            "deckPosition": 28,
+            "cardId": 21,
+            "name": "Metal Conscript 1",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 9,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 29,
+            "cardId": 34,
+            "name": "Metal Soldier 2",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          }
+        ]
+      }
+    },
+    {
+      "side": "B",
+      "playerId": 202,
+      "displayName": "void_walker",
+      "deckSnapshot": {
+        "shuffleApplied": true,
+        "cards": [
+          {
+            "deckPosition": 0,
+            "cardId": 51,
+            "name": "Noble Gas Wanderer 1",
+            "faction": "Noble Gas",
+            "rarity": "Wanderer",
+            "baseAttack": 14,
+            "baseDefense": 18
+          },
+          {
+            "deckPosition": 1,
+            "cardId": 11,
+            "name": "Matte Captive 1",
+            "faction": "Matte",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 2,
+            "cardId": 34,
+            "name": "Metal Soldier 2",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 3,
+            "cardId": 34,
+            "name": "Metal Soldier 2",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 4,
+            "cardId": 24,
+            "name": "Matte Conscript 2",
+            "faction": "Matte",
+            "rarity": "Conscript",
+            "baseAttack": 7,
+            "baseDefense": 9
+          },
+          {
+            "deckPosition": 5,
+            "cardId": 24,
+            "name": "Matte Conscript 2",
+            "faction": "Matte",
+            "rarity": "Conscript",
+            "baseAttack": 7,
+            "baseDefense": 9
+          },
+          {
+            "deckPosition": 6,
+            "cardId": 36,
+            "name": "Matte Soldier 2",
+            "faction": "Matte",
+            "rarity": "Soldier",
+            "baseAttack": 8,
+            "baseDefense": 12
+          },
+          {
+            "deckPosition": 7,
+            "cardId": 21,
+            "name": "Metal Conscript 1",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 9,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 8,
+            "cardId": 22,
+            "name": "Metal Conscript 2",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 6,
+            "baseDefense": 10
+          },
+          {
+            "deckPosition": 9,
+            "cardId": 35,
+            "name": "Matte Soldier 1",
+            "faction": "Matte",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 10,
+            "cardId": 45,
+            "name": "Metal Champion 1",
+            "faction": "Metal",
+            "rarity": "Champion",
+            "baseAttack": 10,
+            "baseDefense": 14
+          },
+          {
+            "deckPosition": 11,
+            "cardId": 36,
+            "name": "Matte Soldier 2",
+            "faction": "Matte",
+            "rarity": "Soldier",
+            "baseAttack": 8,
+            "baseDefense": 12
+          },
+          {
+            "deckPosition": 12,
+            "cardId": 9,
+            "name": "Metal Captive 1",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 13,
+            "cardId": 49,
+            "name": "Gem Elect 1",
+            "faction": "Gem",
+            "rarity": "Elect",
+            "baseAttack": 14,
+            "baseDefense": 14
+          },
+          {
+            "deckPosition": 14,
+            "cardId": 47,
+            "name": "Matte Champion 1",
+            "faction": "Matte",
+            "rarity": "Champion",
+            "baseAttack": 11,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 15,
+            "cardId": 21,
+            "name": "Metal Conscript 1",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 9,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 16,
+            "cardId": 23,
+            "name": "Matte Conscript 1",
+            "faction": "Matte",
+            "rarity": "Conscript",
+            "baseAttack": 8,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 17,
+            "cardId": 10,
+            "name": "Metal Captive 2",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 18,
+            "cardId": 23,
+            "name": "Matte Conscript 1",
+            "faction": "Matte",
+            "rarity": "Conscript",
+            "baseAttack": 8,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 19,
+            "cardId": 35,
+            "name": "Matte Soldier 1",
+            "faction": "Matte",
+            "rarity": "Soldier",
+            "baseAttack": 7,
+            "baseDefense": 13
+          },
+          {
+            "deckPosition": 20,
+            "cardId": 33,
+            "name": "Metal Soldier 1",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 9,
+            "baseDefense": 11
+          },
+          {
+            "deckPosition": 21,
+            "cardId": 22,
+            "name": "Metal Conscript 2",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 6,
+            "baseDefense": 10
+          },
+          {
+            "deckPosition": 22,
+            "cardId": 10,
+            "name": "Metal Captive 2",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 5,
+            "baseDefense": 7
+          },
+          {
+            "deckPosition": 23,
+            "cardId": 9,
+            "name": "Metal Captive 1",
+            "faction": "Metal",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 24,
+            "cardId": 11,
+            "name": "Matte Captive 1",
+            "faction": "Matte",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 25,
+            "cardId": 23,
+            "name": "Matte Conscript 1",
+            "faction": "Matte",
+            "rarity": "Conscript",
+            "baseAttack": 8,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 26,
+            "cardId": 12,
+            "name": "Matte Captive 2",
+            "faction": "Matte",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          },
+          {
+            "deckPosition": 27,
+            "cardId": 33,
+            "name": "Metal Soldier 1",
+            "faction": "Metal",
+            "rarity": "Soldier",
+            "baseAttack": 9,
+            "baseDefense": 11
+          },
+          {
+            "deckPosition": 28,
+            "cardId": 22,
+            "name": "Metal Conscript 2",
+            "faction": "Metal",
+            "rarity": "Conscript",
+            "baseAttack": 6,
+            "baseDefense": 10
+          },
+          {
+            "deckPosition": 29,
+            "cardId": 11,
+            "name": "Matte Captive 1",
+            "faction": "Matte",
+            "rarity": "Captive",
+            "baseAttack": 4,
+            "baseDefense": 8
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 1,
+      "side": "A",
+      "deckPosition": 0,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 2,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 1,
+      "side": "B",
+      "deckPosition": 0,
+      "defenseAtDeployment": 18
+    },
+    {
+      "sequence": 3,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 1,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 0,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 14,
+          "defenseAfter": -6,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 0,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 18,
+          "damageTaken": 8,
+          "defenseAfter": 10,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 4,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 1,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 0,
+          "finalDefense": -6,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 0,
+          "finalDefense": 10,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 6
+      },
+      "energyAfter": {
+        "A": 0,
+        "B": 6
+      }
+    },
+    {
+      "sequence": 5,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 2,
+      "side": "A",
+      "deckPosition": 1,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 6,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 2,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 1,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 14,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 0,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 10,
+          "damageTaken": 7,
+          "defenseAfter": 3,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 7,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 2,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 1,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 0,
+          "finalDefense": 3,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 1
+      },
+      "energyAfter": {
+        "A": 0,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 8,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 3,
+      "side": "A",
+      "deckPosition": 2,
+      "defenseAtDeployment": 14
+    },
+    {
+      "sequence": 9,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 3,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 2,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 14,
+          "damageTaken": 14,
+          "defenseAfter": 0,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 0,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 3,
+          "damageTaken": 14,
+          "defenseAfter": -11,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 10,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 3,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 2,
+          "finalDefense": 0,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 0,
+          "finalDefense": -11,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 0,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 11,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 4,
+      "side": "A",
+      "deckPosition": 3,
+      "defenseAtDeployment": 14
+    },
+    {
+      "sequence": 12,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 4,
+      "side": "B",
+      "deckPosition": 1,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 13,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 4,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 3,
+          "attackUsed": 13,
+          "advantageApplied": true,
+          "defenseBefore": 14,
+          "damageTaken": 4,
+          "defenseAfter": 10,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 1,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 13,
+          "defenseAfter": -5,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 14,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 4,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 3,
+          "finalDefense": 10,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 1,
+          "finalDefense": -5,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 5
+      },
+      "energyAfter": {
+        "A": 5,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 15,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 5,
+      "side": "B",
+      "deckPosition": 2,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 16,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 5,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 3,
+          "attackUsed": 13,
+          "advantageApplied": true,
+          "defenseBefore": 10,
+          "damageTaken": 7,
+          "defenseAfter": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 2,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 13,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 17,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 5,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 3,
+          "finalDefense": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 2,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 0
+      },
+      "energyAfter": {
+        "A": 5,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 18,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 6,
+      "side": "B",
+      "deckPosition": 3,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 19,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 6,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 3,
+          "attackUsed": 13,
+          "advantageApplied": true,
+          "defenseBefore": 3,
+          "damageTaken": 7,
+          "defenseAfter": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 3,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 13,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 20,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 6,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 3,
+          "finalDefense": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 3,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 5,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 21,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 7,
+      "side": "A",
+      "deckPosition": 4,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 22,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 7,
+      "side": "B",
+      "deckPosition": 4,
+      "defenseAtDeployment": 9
+    },
+    {
+      "sequence": 23,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 7,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 4,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 7,
+          "defenseAfter": 6,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 4,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 9,
+          "damageTaken": 7,
+          "defenseAfter": 2,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 24,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 7,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 4,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 6,
+          "damageTaken": 7,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 4,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 2,
+          "damageTaken": 7,
+          "defenseAfter": -5,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 25,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 7,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 4,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 4,
+          "finalDefense": -5,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 5,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 26,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 8,
+      "side": "A",
+      "deckPosition": 5,
+      "defenseAtDeployment": 12
+    },
+    {
+      "sequence": 27,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 8,
+      "side": "B",
+      "deckPosition": 5,
+      "defenseAtDeployment": 9
+    },
+    {
+      "sequence": 28,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 8,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 5,
+          "attackUsed": 11,
+          "advantageApplied": true,
+          "defenseBefore": 12,
+          "damageTaken": 7,
+          "defenseAfter": 5,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 5,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 9,
+          "damageTaken": 11,
+          "defenseAfter": -2,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 29,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 8,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 5,
+          "finalDefense": 5,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 5,
+          "finalDefense": -2,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 2
+      },
+      "energyAfter": {
+        "A": 7,
+        "B": 7
+      }
+    },
+    {
+      "sequence": 30,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 9,
+      "side": "B",
+      "deckPosition": 6,
+      "defenseAtDeployment": 12
+    },
+    {
+      "sequence": 31,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 9,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 5,
+          "attackUsed": 11,
+          "advantageApplied": true,
+          "defenseBefore": 5,
+          "damageTaken": 8,
+          "defenseAfter": -3,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 6,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 12,
+          "damageTaken": 11,
+          "defenseAfter": 1,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 32,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 9,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 5,
+          "finalDefense": -3,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 6,
+          "finalDefense": 1,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 3
+      },
+      "energyAfter": {
+        "A": 7,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 33,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 10,
+      "side": "A",
+      "deckPosition": 6,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 34,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 10,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 6,
+          "attackUsed": 8,
+          "advantageApplied": true,
+          "defenseBefore": 7,
+          "damageTaken": 8,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 6,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 1,
+          "damageTaken": 8,
+          "defenseAfter": -7,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 35,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 10,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 6,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 6,
+          "finalDefense": -7,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 7,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 36,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 11,
+      "side": "A",
+      "deckPosition": 7,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 37,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 11,
+      "side": "B",
+      "deckPosition": 7,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 38,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 11,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 7,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 13,
+          "damageTaken": 9,
+          "defenseAfter": 4,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 7,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 10,
+          "defenseAfter": -3,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 39,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 11,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 7,
+          "finalDefense": 4,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 7,
+          "finalDefense": -3,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 3
+      },
+      "energyAfter": {
+        "A": 10,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 40,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 12,
+      "side": "B",
+      "deckPosition": 8,
+      "defenseAtDeployment": 10
+    },
+    {
+      "sequence": 41,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 12,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 7,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 4,
+          "damageTaken": 6,
+          "defenseAfter": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 8,
+          "attackUsed": 6,
+          "advantageApplied": false,
+          "defenseBefore": 10,
+          "damageTaken": 10,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 42,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 12,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 7,
+          "finalDefense": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 8,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 10,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 43,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 13,
+      "side": "A",
+      "deckPosition": 8,
+      "defenseAtDeployment": 12
+    },
+    {
+      "sequence": 44,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 13,
+      "side": "B",
+      "deckPosition": 9,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 45,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 13,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 8,
+          "attackUsed": 11,
+          "advantageApplied": true,
+          "defenseBefore": 12,
+          "damageTaken": 7,
+          "defenseAfter": 5,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 9,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 11,
+          "defenseAfter": 2,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 46,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 13,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 8,
+          "attackUsed": 11,
+          "advantageApplied": true,
+          "defenseBefore": 5,
+          "damageTaken": 7,
+          "defenseAfter": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 9,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 2,
+          "damageTaken": 11,
+          "defenseAfter": -9,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 47,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 13,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 8,
+          "finalDefense": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 9,
+          "finalDefense": -9,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 10,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 48,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 14,
+      "side": "A",
+      "deckPosition": 9,
+      "defenseAtDeployment": 11
+    },
+    {
+      "sequence": 49,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 14,
+      "side": "B",
+      "deckPosition": 10,
+      "defenseAtDeployment": 14
+    },
+    {
+      "sequence": 50,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 14,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 9,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 11,
+          "damageTaken": 10,
+          "defenseAfter": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 10,
+          "attackUsed": 10,
+          "advantageApplied": false,
+          "defenseBefore": 14,
+          "damageTaken": 9,
+          "defenseAfter": 5,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 51,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 14,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 9,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 1,
+          "damageTaken": 10,
+          "defenseAfter": -9,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 10,
+          "attackUsed": 10,
+          "advantageApplied": false,
+          "defenseBefore": 5,
+          "damageTaken": 9,
+          "defenseAfter": -4,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 52,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 14,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 9,
+          "finalDefense": -9,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 10,
+          "finalDefense": -4,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 10,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 53,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 15,
+      "side": "A",
+      "deckPosition": 10,
+      "defenseAtDeployment": 9
+    },
+    {
+      "sequence": 54,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 15,
+      "side": "B",
+      "deckPosition": 11,
+      "defenseAtDeployment": 12
+    },
+    {
+      "sequence": 55,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 15,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 10,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 9,
+          "damageTaken": 8,
+          "defenseAfter": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 11,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 12,
+          "damageTaken": 10,
+          "defenseAfter": 2,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 56,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 15,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 10,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 1,
+          "damageTaken": 8,
+          "defenseAfter": -7,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 11,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 2,
+          "damageTaken": 10,
+          "defenseAfter": -8,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 57,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 15,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 10,
+          "finalDefense": -7,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 11,
+          "finalDefense": -8,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 10,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 58,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 16,
+      "side": "A",
+      "deckPosition": 11,
+      "defenseAtDeployment": 18
+    },
+    {
+      "sequence": 59,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 16,
+      "side": "B",
+      "deckPosition": 12,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 60,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 16,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 11,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 18,
+          "damageTaken": 4,
+          "defenseAfter": 14,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 12,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 14,
+          "defenseAfter": -6,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 61,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 16,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 11,
+          "finalDefense": 14,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 12,
+          "finalDefense": -6,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 6
+      },
+      "energyAfter": {
+        "A": 16,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 62,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 17,
+      "side": "B",
+      "deckPosition": 13,
+      "defenseAtDeployment": 14
+    },
+    {
+      "sequence": 63,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 17,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 11,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 14,
+          "damageTaken": 14,
+          "defenseAfter": 0,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 13,
+          "attackUsed": 14,
+          "advantageApplied": false,
+          "defenseBefore": 14,
+          "damageTaken": 14,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 64,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 17,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 11,
+          "finalDefense": 0,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 13,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 16,
+        "B": 10
+      }
+    },
+    {
+      "sequence": 65,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 18,
+      "side": "A",
+      "deckPosition": 12,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 66,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 18,
+      "side": "B",
+      "deckPosition": 14,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 67,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 18,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 12,
+          "attackUsed": 5,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 11,
+          "defenseAfter": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 14,
+          "attackUsed": 11,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 5,
+          "defenseAfter": 8,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 68,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 18,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 12,
+          "finalDefense": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 14,
+          "finalDefense": 8,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 4
+      },
+      "energyAfter": {
+        "A": 16,
+        "B": 14
+      }
+    },
+    {
+      "sequence": 69,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 19,
+      "side": "A",
+      "deckPosition": 13,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 70,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 19,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 13,
+          "attackUsed": 5,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 11,
+          "defenseAfter": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 14,
+          "attackUsed": 11,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 5,
+          "defenseAfter": 3,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 71,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 19,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 13,
+          "finalDefense": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 14,
+          "finalDefense": 3,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 4
+      },
+      "energyAfter": {
+        "A": 16,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 72,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 20,
+      "side": "A",
+      "deckPosition": 14,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 73,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 20,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 14,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 11,
+          "defenseAfter": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 14,
+          "attackUsed": 11,
+          "advantageApplied": false,
+          "defenseBefore": 3,
+          "damageTaken": 9,
+          "defenseAfter": -6,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 74,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 20,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 14,
+          "finalDefense": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 14,
+          "finalDefense": -6,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 16,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 75,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 21,
+      "side": "A",
+      "deckPosition": 15,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 76,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 21,
+      "side": "B",
+      "deckPosition": 15,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 77,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 21,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 15,
+          "attackUsed": 11,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 9,
+          "defenseAfter": 4,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 15,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 11,
+          "defenseAfter": -4,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 78,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 21,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 15,
+          "finalDefense": 4,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 15,
+          "finalDefense": -4,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 4
+      },
+      "energyAfter": {
+        "A": 20,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 79,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 22,
+      "side": "B",
+      "deckPosition": 16,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 80,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 22,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 15,
+          "attackUsed": 11,
+          "advantageApplied": false,
+          "defenseBefore": 4,
+          "damageTaken": 8,
+          "defenseAfter": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 16,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 11,
+          "defenseAfter": -3,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 81,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 22,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 15,
+          "finalDefense": -4,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 16,
+          "finalDefense": -3,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 20,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 82,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 23,
+      "side": "A",
+      "deckPosition": 16,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 83,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 23,
+      "side": "B",
+      "deckPosition": 17,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 84,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 23,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 16,
+          "attackUsed": 8,
+          "advantageApplied": true,
+          "defenseBefore": 7,
+          "damageTaken": 5,
+          "defenseAfter": 2,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 17,
+          "attackUsed": 5,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 8,
+          "defenseAfter": -1,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 85,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 23,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 16,
+          "finalDefense": 2,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 17,
+          "finalDefense": -1,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 1
+      },
+      "energyAfter": {
+        "A": 21,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 86,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 24,
+      "side": "B",
+      "deckPosition": 18,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 87,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 24,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 16,
+          "attackUsed": 8,
+          "advantageApplied": true,
+          "defenseBefore": 2,
+          "damageTaken": 8,
+          "defenseAfter": -6,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 18,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 8,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 88,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 24,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 16,
+          "finalDefense": -6,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 18,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 21,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 89,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 25,
+      "side": "A",
+      "deckPosition": 17,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 90,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 25,
+      "side": "B",
+      "deckPosition": 19,
+      "defenseAtDeployment": 13
+    },
+    {
+      "sequence": 91,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 25,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 17,
+          "attackUsed": 8,
+          "advantageApplied": true,
+          "defenseBefore": 7,
+          "damageTaken": 7,
+          "defenseAfter": 0,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 19,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 13,
+          "damageTaken": 8,
+          "defenseAfter": 5,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 92,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 25,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 17,
+          "finalDefense": 0,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 19,
+          "finalDefense": 5,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 0
+      },
+      "energyAfter": {
+        "A": 21,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 93,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 26,
+      "side": "A",
+      "deckPosition": 18,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 94,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 26,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 18,
+          "attackUsed": 11,
+          "advantageApplied": true,
+          "defenseBefore": 8,
+          "damageTaken": 7,
+          "defenseAfter": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 19,
+          "attackUsed": 7,
+          "advantageApplied": false,
+          "defenseBefore": 5,
+          "damageTaken": 11,
+          "defenseAfter": -6,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 95,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 26,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 18,
+          "finalDefense": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 19,
+          "finalDefense": -6,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 6
+      },
+      "energyAfter": {
+        "A": 27,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 96,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 27,
+      "side": "B",
+      "deckPosition": 20,
+      "defenseAtDeployment": 11
+    },
+    {
+      "sequence": 97,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 27,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 18,
+          "attackUsed": 11,
+          "advantageApplied": true,
+          "defenseBefore": 1,
+          "damageTaken": 9,
+          "defenseAfter": -8,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 20,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 11,
+          "damageTaken": 11,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 98,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 27,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 18,
+          "finalDefense": -8,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 20,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 27,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 99,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 28,
+      "side": "A",
+      "deckPosition": 19,
+      "defenseAtDeployment": 11
+    },
+    {
+      "sequence": 100,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 28,
+      "side": "B",
+      "deckPosition": 21,
+      "defenseAtDeployment": 10
+    },
+    {
+      "sequence": 101,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 28,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 19,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 11,
+          "damageTaken": 6,
+          "defenseAfter": 5,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 21,
+          "attackUsed": 6,
+          "advantageApplied": false,
+          "defenseBefore": 10,
+          "damageTaken": 9,
+          "defenseAfter": 1,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 102,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 28,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 19,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 5,
+          "damageTaken": 6,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 21,
+          "attackUsed": 6,
+          "advantageApplied": false,
+          "defenseBefore": 1,
+          "damageTaken": 9,
+          "defenseAfter": -8,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 103,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 28,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 19,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 21,
+          "finalDefense": -8,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 27,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 104,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 29,
+      "side": "A",
+      "deckPosition": 20,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 105,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 29,
+      "side": "B",
+      "deckPosition": 22,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 106,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 29,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 20,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 5,
+          "defenseAfter": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 22,
+          "attackUsed": 5,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 4,
+          "defenseAfter": 3,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 107,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 29,
+      "roundNumber": 2,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 20,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 3,
+          "damageTaken": 5,
+          "defenseAfter": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 22,
+          "attackUsed": 5,
+          "advantageApplied": false,
+          "defenseBefore": 3,
+          "damageTaken": 4,
+          "defenseAfter": -1,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 108,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 29,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 20,
+          "finalDefense": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 22,
+          "finalDefense": -1,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 27,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 109,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 30,
+      "side": "A",
+      "deckPosition": 21,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 110,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 30,
+      "side": "B",
+      "deckPosition": 23,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 111,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 30,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 21,
+          "attackUsed": 8,
+          "advantageApplied": true,
+          "defenseBefore": 7,
+          "damageTaken": 4,
+          "defenseAfter": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 23,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 8,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 112,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 30,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 21,
+          "finalDefense": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 23,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 0
+      },
+      "energyAfter": {
+        "A": 27,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 113,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 31,
+      "side": "B",
+      "deckPosition": 24,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 114,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 31,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 21,
+          "attackUsed": 8,
+          "advantageApplied": true,
+          "defenseBefore": 3,
+          "damageTaken": 4,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 24,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 8,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 115,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 31,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 21,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 24,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 27,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 116,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 32,
+      "side": "A",
+      "deckPosition": 22,
+      "defenseAtDeployment": 9
+    },
+    {
+      "sequence": 117,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 32,
+      "side": "B",
+      "deckPosition": 25,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 118,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 32,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 22,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 9,
+          "damageTaken": 8,
+          "defenseAfter": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 25,
+          "attackUsed": 8,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 10,
+          "defenseAfter": -2,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 119,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 32,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 22,
+          "finalDefense": 1,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 25,
+          "finalDefense": -2,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 2
+      },
+      "energyAfter": {
+        "A": 29,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 120,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 33,
+      "side": "B",
+      "deckPosition": 26,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 121,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 33,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 22,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 1,
+          "damageTaken": 4,
+          "defenseAfter": -3,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 26,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 10,
+          "defenseAfter": -2,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 122,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 33,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 22,
+          "finalDefense": -3,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 26,
+          "finalDefense": -2,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 29,
+        "B": 18
+      }
+    },
+    {
+      "sequence": 123,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 34,
+      "side": "A",
+      "deckPosition": 23,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 124,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 34,
+      "side": "B",
+      "deckPosition": 27,
+      "defenseAtDeployment": 11
+    },
+    {
+      "sequence": 125,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 34,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 23,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 9,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 27,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 11,
+          "damageTaken": 4,
+          "defenseAfter": 7,
+          "defeated": false
+        }
+      ]
+    },
+    {
+      "sequence": 126,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 34,
+      "outcome": "A_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 23,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 27,
+          "finalDefense": 7,
+          "defeated": false
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "B",
+        "defeatedSide": "A",
+        "amount": 1
+      },
+      "energyAfter": {
+        "A": 29,
+        "B": 19
+      }
+    },
+    {
+      "sequence": 127,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 35,
+      "side": "A",
+      "deckPosition": 24,
+      "defenseAtDeployment": 7
+    },
+    {
+      "sequence": 128,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 35,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 24,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 9,
+          "defenseAfter": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 27,
+          "attackUsed": 9,
+          "advantageApplied": false,
+          "defenseBefore": 7,
+          "damageTaken": 9,
+          "defenseAfter": -2,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 129,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 35,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 24,
+          "finalDefense": -2,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 27,
+          "finalDefense": -2,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 29,
+        "B": 19
+      }
+    },
+    {
+      "sequence": 130,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 36,
+      "side": "A",
+      "deckPosition": 25,
+      "defenseAtDeployment": 9
+    },
+    {
+      "sequence": 131,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 36,
+      "side": "B",
+      "deckPosition": 28,
+      "defenseAtDeployment": 10
+    },
+    {
+      "sequence": 132,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 36,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 25,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 9,
+          "damageTaken": 6,
+          "defenseAfter": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 28,
+          "attackUsed": 6,
+          "advantageApplied": false,
+          "defenseBefore": 10,
+          "damageTaken": 10,
+          "defenseAfter": 0,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 133,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 36,
+      "outcome": "B_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 25,
+          "finalDefense": 3,
+          "defeated": false
+        },
+        {
+          "side": "B",
+          "deckPosition": 28,
+          "finalDefense": 0,
+          "defeated": true
+        }
+      ],
+      "energyAward": {
+        "recipientSide": "A",
+        "defeatedSide": "B",
+        "amount": 0
+      },
+      "energyAfter": {
+        "A": 29,
+        "B": 19
+      }
+    },
+    {
+      "sequence": 134,
+      "type": "CARD_DEPLOYED",
+      "clashNumber": 37,
+      "side": "B",
+      "deckPosition": 29,
+      "defenseAtDeployment": 8
+    },
+    {
+      "sequence": 135,
+      "type": "ROUND_RESOLVED",
+      "clashNumber": 37,
+      "roundNumber": 1,
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 25,
+          "attackUsed": 10,
+          "advantageApplied": true,
+          "defenseBefore": 3,
+          "damageTaken": 4,
+          "defenseAfter": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 29,
+          "attackUsed": 4,
+          "advantageApplied": false,
+          "defenseBefore": 8,
+          "damageTaken": 10,
+          "defenseAfter": -2,
+          "defeated": true
+        }
+      ]
+    },
+    {
+      "sequence": 136,
+      "type": "CLASH_RESOLVED",
+      "clashNumber": 37,
+      "outcome": "BOTH_DEFEATED",
+      "cards": [
+        {
+          "side": "A",
+          "deckPosition": 25,
+          "finalDefense": -1,
+          "defeated": true
+        },
+        {
+          "side": "B",
+          "deckPosition": 29,
+          "finalDefense": -2,
+          "defeated": true
+        }
+      ],
+      "energyAward": null,
+      "energyAfter": {
+        "A": 29,
+        "B": 19
+      }
+    },
+    {
+      "sequence": 137,
+      "type": "DECK_EXHAUSTED",
+      "exhaustedSide": "B",
+      "remainingCardsBySide": {
+        "A": 4,
+        "B": 0
+      },
+      "bonusPerCard": 4,
+      "bonusAwardedBySide": {
+        "A": 16,
+        "B": 0
+      },
+      "energyAfter": {
+        "A": 45,
+        "B": 19
+      }
+    },
+    {
+      "sequence": 138,
+      "type": "BATTLE_FINISHED",
+      "endReason": "DECK_EXHAUSTED",
+      "winnerSide": "A",
+      "finalEnergyBySide": {
+        "A": 45,
+        "B": 19
+      }
+    }
+  ],
+  "result": {
+    "endReason": "DECK_EXHAUSTED",
+    "winnerSide": "A",
+    "finalEnergyBySide": {
+      "A": 45,
+      "B": 19
+    }
+  }
+}
