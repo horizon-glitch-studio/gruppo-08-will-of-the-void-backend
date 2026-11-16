@@ -27,6 +27,7 @@ Run `./mvnw test` from the repository root to build and test both modules (the `
 
 - Install Docker.
 - Copy `.env.example` to `.env` and adjust the environment variables as needed.
-- Run `docker compose up -d --build` to build and start the containers.
+- To run the API from IntelliJ, start `WillofthevoidApplication`: Spring Boot's Docker Compose support starts the database from `compose.yaml` and connects to it. JDK 25 is required.
+- To run everything in Docker instead, run `docker compose --profile app up -d --build` to build and start the database and the backend.
 - The backend is available at [http://localhost:8080](http://localhost:8080/).
-- Run `docker compose down` to stop the containers. Add `-v` to delete the database too, which is needed when `V1__init.sql` changes before the first release.
+- Run `docker compose --profile app down` to stop the containers. Add `-v` to delete the database too, which is needed when `V1__init.sql` changes before the first release.
