@@ -2,7 +2,7 @@
 -- Each table declares its own foreign keys, so tables are created after the tables they
 -- reference. The unique indexes at the end are game rules (unique names, one bonus,
 -- no duplicate pairs), so they cannot be removed for performance reasons.
--- The initial Flyway migration is db/V1__init.sql at the repository root.
+-- The initial Flyway migration is api/src/main/resources/db/migration/V1__init.sql (a copy of this file).
 -- 31 tables. Do not edit V1 after it has been applied: add a new V2__... migration.
 
 CREATE TABLE "avatar" (
