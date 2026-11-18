@@ -13,8 +13,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** Turns every exception into the common error format. Security errors arrive here too (see security). */
@@ -45,6 +47,20 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException e, HttpServletRequest request) {
 		return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "The request body is missing or malformed.", request, List.of());
+	}
+
+	/** A query or path parameter that is not of its type, such as an unknown value of an enum. */
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException e, HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "One or more fields are invalid.", request,
+				List.of(new ApiError.FieldErrorItem(e.getName(), "FIELD_INVALID")));
+	}
+
+	@ExceptionHandler(MissingServletRequestParameterException.class)
+	public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException e,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "One or more fields are invalid.", request,
+				List.of(new ApiError.FieldErrorItem(e.getParameterName(), "FIELD_REQUIRED")));
 	}
 
 	@ExceptionHandler(AuthenticationException.class)

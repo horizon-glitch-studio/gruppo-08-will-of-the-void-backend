@@ -592,7 +592,7 @@ The range never goes below 0 trophies. If fewer than 5 opponents fall in the ran
 | Protection starts after | 5 RANKED attacks received in 24 hours |
 | Protection lasts | 12 hours (`player.protected_until`) |
 
-The limits add to the rule of one battle per opponent per list, which alone could be bypassed by refreshing the list. FRIEND battles are not counted. Only RANKED attacks start the protection, because QUICK battles cost the defender no trophies. While protected, a player does not appear in new opponent lists and cannot be attacked in RANKED. If a protected player starts a RANKED attack, `protected_until` is cleared at once, so nobody can attack others while staying out of reach.
+The limits add to the rule of one battle per opponent per list, which alone could be bypassed by refreshing the list. FRIEND battles are not counted. Only RANKED attacks start the protection, because QUICK battles cost the defender no trophies. While protected, a player does not appear in new opponent lists and cannot be attacked in RANKED. If a protected player starts a RANKED attack, the protection ends at once (`protected_until` is set to that instant), so nobody can attack others while staying out of reach. The attacks received before the end of a protection are not counted again for the next one. Like the trophies, `protected_until` is changed only with atomic UPDATEs, because it is set by other players' attacks.
 
 ## 7 · Friendships
 

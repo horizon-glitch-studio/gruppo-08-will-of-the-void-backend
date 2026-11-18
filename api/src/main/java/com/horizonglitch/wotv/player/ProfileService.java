@@ -2,6 +2,7 @@ package com.horizonglitch.wotv.player;
 
 import com.horizonglitch.wotv.auth.TokenService;
 import com.horizonglitch.wotv.auth.TokenType;
+import com.horizonglitch.wotv.battle.BattleService;
 import com.horizonglitch.wotv.battle.BattleStatsService;
 import com.horizonglitch.wotv.common.ApiError;
 import com.horizonglitch.wotv.common.ApiException;
@@ -30,13 +31,14 @@ public class ProfileService {
 	private final BattleStatsService battleStats;
 	private final TokenService tokenService;
 	private final TradeService tradeService;
+	private final BattleService battleService;
 	private final PasswordEncoder passwordEncoder;
 	private final AppProperties properties;
 	private final Clock clock;
 
 	public ProfileService(PlayerRepository players, PlayerSettingsRepository settings, AvatarRepository avatars,
 			BattleStatsService battleStats, TokenService tokenService, TradeService tradeService,
-			PasswordEncoder passwordEncoder,
+			BattleService battleService, PasswordEncoder passwordEncoder,
 			AppProperties properties, Clock clock) {
 		this.players = players;
 		this.settings = settings;
@@ -44,6 +46,7 @@ public class ProfileService {
 		this.battleStats = battleStats;
 		this.tokenService = tokenService;
 		this.tradeService = tradeService;
+		this.battleService = battleService;
 		this.passwordEncoder = passwordEncoder;
 		this.properties = properties;
 		this.clock = clock;
@@ -129,7 +132,8 @@ public class ProfileService {
 
 	/**
 	 * Soft delete: the row stays so battles and trades keep their history, but username and email are
-	 * anonymised, every token is invalidated, pending trades are cancelled and the player is no longer attackable.
+	 * anonymised, every token is invalidated, pending trades and challenges are cancelled and the player is no
+	 * longer attackable.
 	 */
 	@Transactional
 	public void delete(long playerId, ProfileRequests.DeleteAccount request) {
@@ -141,6 +145,7 @@ public class ProfileService {
 		player.setEmail("deleted_" + player.getId() + "@deleted.invalid");
 		player.setDefenseDeck(null);
 		tradeService.cancelAllPending(player);
+		battleService.cancelAllPending(player);
 		for (TokenType type : TokenType.values()) {
 			tokenService.revokeAll(player, type);
 		}
