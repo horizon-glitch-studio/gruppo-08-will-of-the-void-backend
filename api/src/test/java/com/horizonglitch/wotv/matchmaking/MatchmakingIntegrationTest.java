@@ -212,6 +212,31 @@ class MatchmakingIntegrationTest {
 	}
 
 	@Test
+	void rankedPromotionGrantsOrbitRewardOnceForTheCurrentSeason() throws Exception {
+		Cards c = fx.newCards();
+		Player alice = fx.newPlayer();
+		Player bob = fx.newPlayer();
+		long aliceDeck = fx.defenseDeck(alice, c.strong());
+		fx.defenseDeck(bob, c.weak());
+		fx.setTrophies(alice, 190);
+		fx.setTrophies(bob, 190);
+		fx.giveList(alice, "RANKED", bob);
+		int balanceBefore = jdbc.queryForObject("select shard_balance from player where id = ?", Integer.class, alice.id());
+		Integer seasonId = jdbc.queryForObject("select id from season where reset_at is null and starts_at <= now() "
+				+ "and ends_at > now() order by starts_at desc limit 1", Integer.class);
+
+		wonByChallenger(fx.attack(alice, bob, "RANKED", aliceDeck)
+				.andExpect(jsonPath("$.challengerTrophiesDelta").value(16)), 30);
+
+		assertThat(jdbc.queryForObject("select shard_balance from player where id = ?", Integer.class, alice.id()))
+				.isEqualTo(balanceBefore + 200);
+		assertThat(jdbc.queryForObject("select count(*) from shard_transaction where player_id = ? "
+				+ "and reason = 'ORBIT_REWARD' and season_id = ? and orbit = 2 and amount = 200",
+				Integer.class, alice.id(), seasonId)).isEqualTo(1);
+		assertThat(fx.notifications(alice, "ORBIT_REWARD")).isEqualTo(1);
+	}
+
+	@Test
 	void rankedNeedsAValidDefenseDeckFromBothSummoners() throws Exception {
 		Cards c = fx.newCards();
 		Player alice = fx.newPlayer();

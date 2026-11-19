@@ -32,7 +32,7 @@ Example opening:
 
 `POST .../open` does not accept cards or rarities from the client: the server checks availability (the standard pack is always on sale, an event pack only during its event, one event at a time), deducts Shards, and draws cards within a transaction. If a Wanderer still on board is drawn again, its stay is extended by 7 days; if it has already left, it comes back with a new full period.
 
-Shard transaction types: `INVITE_BONUS`, `REGISTRATION_BONUS`, `DAILY_BONUS`, `COMEBACK_BONUS`, `SEASON_REWARD`, `ORBIT_REWARD`, `PACK_PURCHASE`. The balance must also be returned in the profile and updated atomically; the client never sends a balance to be saved.
+Shard transaction types: `INVITE_BONUS`, `REGISTRATION_BONUS`, `DAILY_BONUS`, `COMEBACK_BONUS`, `EMAIL_BONUS`, `SEASON_REWARD`, `ORBIT_REWARD`, `PACK_PURCHASE`. The balance must also be returned in the profile and updated atomically; the client never sends a balance to be saved.
 
 There are no purchase limits. Opening and transaction histories are kept for the lifetime of the account.
 

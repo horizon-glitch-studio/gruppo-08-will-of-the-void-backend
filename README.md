@@ -57,3 +57,7 @@ Inside a package, classes are named after their role: `Deck` (entity), `DeckRepo
 - To run everything in Docker instead, run `docker compose --profile app up -d --build` to build and start the database and the backend.
 - The backend is available at [http://localhost:8080](http://localhost:8080/).
 - Run `docker compose --profile app down` to stop the containers. Add `-v` to delete the database too, which is needed when `V1__init.sql` changes before the first release.
+
+### Environment variables
+
+`APP_FRONTEND_URL` is the base URL of the React app and must include its `/play` path. It defaults to `http://localhost:5173/play`; in production, set it to `https://<domain>/play` so verification and password reset links open the correct routes.

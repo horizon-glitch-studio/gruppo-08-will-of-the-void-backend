@@ -23,6 +23,14 @@ public interface BattleRepository extends JpaRepository<Battle, Long>, JpaSpecif
 			""", nativeQuery = true)
 	BattleCounts countPlayed(@Param("playerId") Long playerId);
 
+	/** ECO-10: distinct opponents in PLAYED battles, in every mode. */
+	@Query(value = """
+			SELECT count(DISTINCT CASE WHEN challenger_id = :playerId THEN opponent_id ELSE challenger_id END)
+			FROM battle
+			WHERE status = 'PLAYED' AND (challenger_id = :playerId OR opponent_id = :playerId)
+			""", nativeQuery = true)
+	long countDistinctPlayedOpponents(@Param("playerId") Long playerId);
+
 	interface BattleCounts {
 		long getPlayed();
 

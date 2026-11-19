@@ -16,6 +16,10 @@ import com.horizonglitch.wotv.notification.NotificationType;
 import com.horizonglitch.wotv.player.Player;
 import com.horizonglitch.wotv.player.PlayerRepository;
 import com.horizonglitch.wotv.player.PlayerService;
+import com.horizonglitch.wotv.season.Orbit;
+import com.horizonglitch.wotv.season.Season;
+import com.horizonglitch.wotv.season.SeasonService;
+import com.horizonglitch.wotv.shard.ShardService;
 import com.horizonglitch.wotv.social.FriendshipRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -49,6 +53,8 @@ public class BattleService {
 	private final BattleLogRepository logs;
 	private final OpponentListEntryRepository listEntries;
 	private final PlayerService players;
+	private final SeasonService seasons;
+	private final ShardService shards;
 	private final PlayerRepository playerRows;
 	private final DeckService decks;
 	private final FriendshipRepository friendships;
@@ -61,13 +67,16 @@ public class BattleService {
 	private final Clock clock;
 
 	public BattleService(BattleRepository battles, BattleLogRepository logs, OpponentListEntryRepository listEntries,
-			PlayerService players, PlayerRepository playerRows, DeckService decks, FriendshipRepository friendships,
+			PlayerService players, SeasonService seasons, ShardService shards, PlayerRepository playerRows, DeckService decks,
+			FriendshipRepository friendships,
 			NotificationService notifications, MatchSimulator simulator, BattleJson json, RandomGenerator random,
 			AppProperties properties, Clock clock) {
 		this.battles = battles;
 		this.logs = logs;
 		this.listEntries = listEntries;
 		this.players = players;
+		this.seasons = seasons;
+		this.shards = shards;
 		this.playerRows = playerRows;
 		this.decks = decks;
 		this.friendships = friendships;
@@ -386,9 +395,11 @@ public class BattleService {
 		battle.setDecksSnapshot(json.playedSnapshot(played, challenger.getId(), challenger.getUsername(),
 				opponent.getId(), opponent.getUsername()));
 		if (battle.getMode() == BattleMode.RANKED) {
-			moveTrophies(battle, challenger, opponent);
+			moveTrophies(battle, challenger, opponent, seasons.currentAt(now).orElse(null));
 		}
 		battles.saveAndFlush(battle);
+		shards.grantInviteBonusIfEligible(challenger);
+		shards.grantInviteBonusIfEligible(opponent);
 
 		BattleLog log = new BattleLog();
 		log.setBattle(battle);
@@ -404,7 +415,7 @@ public class BattleService {
 	 * RANK-04 and RANK-05: Elo on the current trophies, what one gains the other loses, never below 0. The deltas
 	 * saved are the trophies actually gained or lost.
 	 */
-	private void moveTrophies(Battle battle, Player challenger, Player opponent) {
+	private void moveTrophies(Battle battle, Player challenger, Player opponent, Season season) {
 		int challengerTrophies = playerRows.trophiesOf(challenger.getId());
 		int opponentTrophies = playerRows.trophiesOf(opponent.getId());
 		double result = switch (battle.getOutcome()) {
@@ -419,6 +430,22 @@ public class BattleService {
 		playerRows.addTrophies(opponent.getId(), opponentDelta);
 		battle.setChallengerTrophiesDelta(challengerDelta);
 		battle.setOpponentTrophiesDelta(opponentDelta);
+		if (season != null) {
+			grantOrbitRewardOnPromotion(challenger, challengerTrophies, challengerDelta, season);
+			grantOrbitRewardOnPromotion(opponent, opponentTrophies, opponentDelta, season);
+		}
+	}
+
+	/** RANK-11: reward an upward Orbit crossing; the transaction uniqueness key suppresses repeat climbs. */
+	private void grantOrbitRewardOnPromotion(Player player, int trophiesBefore, int delta, Season season) {
+		if (delta <= 0) {
+			return;
+		}
+		Orbit before = Orbit.fromTrophies(trophiesBefore);
+		Orbit after = Orbit.fromTrophies(trophiesBefore + delta);
+		if (after.ordinal() > before.ordinal()) {
+			shards.grantOrbitRewardIfEligible(player, season, after);
+		}
 	}
 
 	/** MODE-21: attacking in Ranked ends the attacker's shield. MODE-19: enough attacks received start one. */
