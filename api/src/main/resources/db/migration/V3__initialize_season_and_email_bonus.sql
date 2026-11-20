@@ -2,7 +2,7 @@
 INSERT INTO season (starts_at, ends_at)
 VALUES (now(), now() + interval '4 weeks');
 
--- ECO-07: email verification is a distinct, one-time Shard earning movement.
+-- ECO-07: added missing EMAIL_BONUS constraint.
 ALTER TABLE shard_transaction DROP CONSTRAINT chk_shard_reason_consistent;
 
 ALTER TABLE shard_transaction ADD CONSTRAINT chk_shard_reason_consistent CHECK (
