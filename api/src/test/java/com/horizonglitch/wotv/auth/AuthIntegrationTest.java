@@ -165,6 +165,8 @@ class AuthIntegrationTest {
 		loginWith(name + "@example.com", PASSWORD).andExpect(status().isOk());
 
 		assertThat(balance(name)).isEqualTo(afterRegistration + daily);
+		assertThat(jdbc.queryForObject("select last_active_at is not null from player where username = ?",
+				Boolean.class, name)).isTrue();
 	}
 
 	@Test
@@ -172,7 +174,8 @@ class AuthIntegrationTest {
 		String name = uniqueName();
 		register(name, name + "@example.com").andExpect(status().isCreated());
 		login(name).andExpect(status().isOk());
-		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days' where username = ?", name);
+		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days', "
+				+ "last_active_at = now() - interval '8 days' where username = ?", name);
 
 		int comeback = properties.economy().dailyBonus() * properties.economy().comebackBonusMultiplier();
 		login(name).andExpect(status().isOk())
@@ -190,11 +193,46 @@ class AuthIntegrationTest {
 		assertThat(jdbc.queryForObject("select amount from shard_transaction where player_id = ? "
 				+ "and reason = 'COMEBACK_BONUS'", Integer.class, playerId)).isEqualTo(comeback);
 
-		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days' where username = ?", name);
+		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days', "
+				+ "last_active_at = now() - interval '8 days' where username = ?", name);
 		login(name).andExpect(status().isOk())
 				.andExpect(jsonPath("$.comebackBonus.granted").value(false));
 		assertThat(jdbc.queryForObject("select count(*) from notification n join player p on p.id = n.player_id "
 				+ "where p.username = ? and n.type = 'COMEBACK_BONUS'", Integer.class, name)).isEqualTo(1);
+	}
+
+	@Test
+	void refreshRecordsAQualifyingReturnForTheDailyBonusClaim() throws Exception {
+		String name = uniqueName();
+		register(name, name + "@example.com").andExpect(status().isCreated());
+		String loginBody = login(name).andReturn().getResponse().getContentAsString();
+		String refreshToken = JsonPath.read(loginBody, "$.refreshToken");
+		int balanceBeforeReturn = balance(name);
+		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days', "
+				+ "last_active_at = now() - interval '8 days' where username = ?", name);
+
+		String refreshedBody = refresh(refreshToken).andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		assertThat(balance(name)).isEqualTo(balanceBeforeReturn);
+
+		String accessToken = JsonPath.read(refreshedBody, "$.accessToken");
+		int daily = properties.economy().dailyBonus();
+		int comeback = daily * properties.economy().comebackBonusMultiplier();
+		claimDailyBonus(accessToken).andExpect(status().isOk())
+				.andExpect(jsonPath("$.dailyBonus.granted").value(true))
+				.andExpect(jsonPath("$.dailyBonus.amount").value(daily))
+				.andExpect(jsonPath("$.comebackBonus.granted").value(true))
+				.andExpect(jsonPath("$.comebackBonus.amount").value(comeback));
+		claimDailyBonus(accessToken).andExpect(status().isOk())
+				.andExpect(jsonPath("$.dailyBonus.granted").value(false))
+				.andExpect(jsonPath("$.comebackBonus.granted").value(false));
+
+		Long playerId = jdbc.queryForObject("select id from player where username = ?", Long.class, name);
+		assertThat(jdbc.queryForObject("select count(*) from shard_transaction where player_id = ? "
+				+ "and reason = 'DAILY_BONUS'", Integer.class, playerId)).isEqualTo(2);
+		assertThat(jdbc.queryForObject("select count(*) from shard_transaction where player_id = ? "
+				+ "and reason = 'COMEBACK_BONUS'", Integer.class, playerId)).isEqualTo(1);
+		assertThat(balance(name)).isEqualTo(balanceBeforeReturn + daily + comeback);
 	}
 
 	@Test
@@ -218,10 +256,13 @@ class AuthIntegrationTest {
 		register(name, name + "@example.com").andExpect(status().isCreated());
 		String body = login(name).andReturn().getResponse().getContentAsString();
 		String refresh = JsonPath.read(body, "$.refreshToken");
+		jdbc.update("update player set last_active_at = now() - interval '2 hours' where username = ?", name);
 
 		String refreshed = refresh(refresh).andExpect(status().isOk())
 				.andExpect(jsonPath("$.accessToken").isNotEmpty())
 				.andReturn().getResponse().getContentAsString();
+		assertThat(jdbc.queryForObject("select last_active_at > now() - interval '1 hour' from player where username = ?",
+				Boolean.class, name)).isTrue();
 		refresh(refresh).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
 
 		String access = JsonPath.read(refreshed, "$.accessToken");
@@ -316,6 +357,10 @@ class AuthIntegrationTest {
 	private ResultActions refresh(String refreshToken) throws Exception {
 		return mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
 				.content("{\"refreshToken\":\"" + refreshToken + "\"}"));
+	}
+
+	private ResultActions claimDailyBonus(String accessToken) throws Exception {
+		return mvc.perform(post("/api/v1/auth/daily-bonus").header("Authorization", "Bearer " + accessToken));
 	}
 
 	private ResultActions actionToken(String path, String token) throws Exception {

@@ -9,6 +9,7 @@ import com.horizonglitch.wotv.notification.NotificationService;
 import com.horizonglitch.wotv.notification.NotificationType;
 import com.horizonglitch.wotv.pack.PackOpening;
 import com.horizonglitch.wotv.player.Player;
+import com.horizonglitch.wotv.player.PlayerRepository;
 import com.horizonglitch.wotv.season.Orbit;
 import com.horizonglitch.wotv.season.Season;
 import java.time.Clock;
@@ -35,14 +36,16 @@ public class ShardService {
 	}
 
 	private final ShardTransactionRepository transactions;
+	private final PlayerRepository players;
 	private final BattleStatsService battleStats;
 	private final NotificationService notifications;
 	private final AppProperties.Economy economy;
 	private final Clock clock;
 
-	public ShardService(ShardTransactionRepository transactions, BattleStatsService battleStats, NotificationService notifications,
+	public ShardService(ShardTransactionRepository transactions, PlayerRepository players, BattleStatsService battleStats, NotificationService notifications,
 			AppProperties properties, Clock clock) {
 		this.transactions = transactions;
+		this.players = players;
 		this.battleStats = battleStats;
 		this.notifications = notifications;
 		this.economy = properties.economy();
@@ -108,24 +111,26 @@ public class ShardService {
 	}
 
 	/**
-	 * Daily bonus at the first login of the day in the player's time zone, and comeback bonus after at least
-	 * {@code comebackAbsenceDays} without logging in, at most once every {@code comebackIntervalDays}.
+	 * Daily bonus at the first login or claim of the day in the player's time zone, and comeback bonus after at
+	 * least {@code comebackAbsenceDays} without authenticated activity, at most once every
+	 * {@code comebackIntervalDays}.
 	 * The caller must hold the lock on the player's row, so two simultaneous logins cannot both collect them.
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public LoginBonuses grantLoginBonuses(Player lockedPlayer) {
 		Instant now = clock.instant();
 		ZoneId zone = ZoneId.of(lockedPlayer.getTimezone());
-		Instant last = lockedPlayer.getLastDailyBonusAt();
+		Instant lastDailyBonus = lockedPlayer.getLastDailyBonusAt();
 
-		boolean dailyDue = last == null || LocalDate.ofInstant(last, zone).isBefore(LocalDate.ofInstant(now, zone));
+		boolean dailyDue = lastDailyBonus == null
+				|| LocalDate.ofInstant(lastDailyBonus, zone).isBefore(LocalDate.ofInstant(now, zone));
 		if (!dailyDue) {
 			return LoginBonuses.none();
 		}
 
 		int comeback = 0;
-		boolean longAbsence = last != null && !last.isAfter(now.minus(Duration.ofDays(economy.comebackAbsenceDays())));
-		if (longAbsence && !transactions.existsByPlayer_IdAndReasonAndCreatedAtAfter(lockedPlayer.getId(),
+		if (lockedPlayer.isComebackEligible()
+				&& !transactions.existsByPlayer_IdAndReasonAndCreatedAtAfter(lockedPlayer.getId(),
 				ShardReason.COMEBACK_BONUS, now.minus(Duration.ofDays(economy.comebackIntervalDays())))) {
 			comeback = economy.dailyBonus() * economy.comebackBonusMultiplier();
 			grantComebackBonus(lockedPlayer, comeback);
@@ -134,6 +139,8 @@ public class ShardService {
 		int daily = economy.dailyBonus();
 		grantDailyBonus(lockedPlayer, daily);
 		lockedPlayer.setLastDailyBonusAt(now);
+		players.clearComebackEligibility(lockedPlayer.getId());
+		lockedPlayer.setComebackEligible(false);
 		return new LoginBonuses(daily, comeback);
 	}
 
