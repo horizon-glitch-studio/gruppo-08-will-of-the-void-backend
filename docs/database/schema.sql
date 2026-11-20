@@ -25,6 +25,8 @@ CREATE TABLE "player" (
   "shard_balance" int NOT NULL CHECK (shard_balance >= 0) DEFAULT 0,
   "trophies" int NOT NULL CHECK (trophies >= 0) DEFAULT 0,
   "last_daily_bonus_at" timestamptz,
+  "last_active_at" timestamptz,
+  "comeback_eligible" boolean NOT NULL DEFAULT false,
   "timezone" varchar(64) NOT NULL DEFAULT 'Europe/Rome',
   "timezone_changed_at" timestamptz,
   "protected_until" timestamptz,

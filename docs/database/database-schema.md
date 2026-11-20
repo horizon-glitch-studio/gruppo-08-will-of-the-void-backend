@@ -66,6 +66,8 @@ erDiagram
         int shard_balance
         int trophies
         timestamptz last_daily_bonus_at
+        timestamptz last_active_at
+        boolean comeback_eligible
         varchar(64) timezone
         timestamptz timezone_changed_at
         timestamptz protected_until
@@ -162,7 +164,9 @@ erDiagram
 | card → notification.card_id | 0..1 → 0..N | The Wanderer that left the ship. |
 | friendship → notification.friendship_id | 0..1 → 0..N | The friend request received or accepted. ON DELETE CASCADE: when a request is rejected or a friend removed, the row is deleted and so are its notifications. |
 
-Five columns of `player` are not relationships but support game rules: `protected_until` (protection after 5 RANKED attacks received in 24 hours, see view 6), `last_daily_bonus_at`, `timezone` and `timezone_changed_at` (daily login bonus) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
+Seven columns of `player` are not relationships but support game rules: `protected_until` (protection after 5 RANKED attacks received in 24 hours, see view 6), `last_daily_bonus_at`, `last_active_at`, `comeback_eligible`, `timezone` and `timezone_changed_at` (daily bonus and activity tracking) and `deleted_at` (soft delete: on deletion, username and email are anonymised).
+
+**Activity tracking.** `last_active_at` records the last authenticated request, with writes throttled to at most once per hour. A successful login or refresh also records activity. `comeback_eligible` preserves a return after the inactivity threshold has been crossed, even if another authenticated request updates `last_active_at` before the player claims rewards. Existing players are initialized from `last_daily_bonus_at`, or `created_at` if they have never received a daily bonus. Refreshing a token does not claim a bonus.
 
 **Username and email are unique ignoring case.** The uniqueness is given by two expression indexes, `uq_player_username_lower` and `uq_player_email_lower` on `lower(...)`, so `Mario@mail.com` and `mario@mail.com` cannot both exist. The diagram marks the two columns as UK.
 
@@ -178,7 +182,7 @@ Five columns of `player` are not relationships but support game rules: `protecte
 
 **Settings are synced with the account.** `player_settings` keeps the accessibility options as booleans, so they follow the player on every browser and device. Each column says what happens when it is true: `reduce_motion` reduces animations, `reduce_transparency` replaces transparent surfaces with solid ones, `show_text_labels` writes faction, rarity and advantages as text next to their colour or icon, for players who do not tell colours apart easily. It is a separate table so that changing a setting never conflicts with the optimistic locking (`version`) of the profile, and a new setting is just a new column.
 
-**Comeback bonus.** A player who logs in after at least 7 days without playing gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. It is worth less than the daily bonuses missed in 7 days, so staying away on purpose never pays. No column is needed: the absence is measured from `last_daily_bonus_at`, since the daily bonus is collected at the first login of the day, and the 30-day limit is checked on the player's last COMEBACK_BONUS row in `shard_transaction`, with the `player` row locked so that two simultaneous logins cannot both collect it. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
+**Comeback bonus.** A player who returns after at least 7 days without an authenticated request gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. `comeback_eligible` records that the inactivity threshold was crossed; the cooldown is checked against the player's last COMEBACK_BONUS row in `shard_transaction`. The player row is locked so simultaneous logins or claims cannot grant the reward twice. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
 
 In phase 1 Shards come from six sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. They are spent on packs.
 
@@ -571,7 +575,7 @@ The list is stored server-side because the API is stateless: reloading the page 
 
 **Who can be in a list.** The two modes fill the list in different ways:
 
-- **QUICK** holds random players active in the last 7 days. Activity is measured by `player.last_daily_bonus_at`: the daily bonus is collected at the first login of each day, so this column always holds the last day the player came in, and no new column is needed. The same column measures the absence for the comeback bonus (view 1). Players without a defense deck can be offered: against them the battle becomes a request.
+- **QUICK** holds random players active in the last 7 days, measured by `player.last_active_at`. Players without a defense deck can be offered: against them the battle becomes a request.
 - **RANKED** holds players within a range of trophies around the player's own, which narrows as the Orbit rises (Orbits are described in view 8). It never holds the player themselves, players without a VALID defense deck or protected players.
 
 | Orbit of the player | Trophies | Range of the opponents |
@@ -726,8 +730,8 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | Every player has a `pack_guarantee` row | Registration, in the same transaction |
 | Card ownership and no duplication in trades | Accepting a trade, with a pessimistic lock |
 | Wanderers cannot be traded | Proposing and accepting a trade |
-| Comeback bonus only after 7 days of absence and at most once every 30 days | Logging in, before the daily bonus, with the `player` row locked |
-| One daily bonus per day in the player's time zone | Logging in, with an atomic UPDATE on `last_daily_bonus_at` |
+| Comeback bonus only after 7 days of absence and at most once every 30 days | Login or `POST /auth/daily-bonus`, using recorded authenticated activity and the locked `player` row |
+| One daily bonus per day in the player's time zone | Logging in or `POST /auth/daily-bonus`, with the player row locked |
 | `player.timezone` is a valid IANA time zone | Registration and profile update (`ZoneId.of`) |
 | The time zone changes at most once every 30 days | Profile update, with an atomic UPDATE on `timezone_changed_at` |
 | Every player has a `player_settings` row | Registration, in the same transaction |
@@ -737,7 +741,7 @@ Foreign keys only check that a linked row exists, not the game rules. These are 
 | A battle is instant only if the opponent's defense deck is VALID; RANKED requires a valid defense deck from both players | Starting a battle |
 | An opponent list entry gets its `battle_id` only when the battle is PLAYED | Playing an instant battle, accepting a request |
 | Opponent list refreshed only after the 5-second cooldown | Refreshing the list, checking `last_refresh_at` |
-| A QUICK list holds only players active in the last 7 days; a RANKED list holds only players in the trophy range of the player's Orbit | Generating the opponent list, from `last_daily_bonus_at` and `trophies` |
+| A QUICK list holds only players active in the last 7 days; a RANKED list holds only players in the trophy range of the player's Orbit | Generating the opponent list, from `last_active_at` and `trophies` |
 | The leaderboard, global and per Orbit, lists only players with a PLAYED RANKED battle in the current season | Reading the leaderboard |
 | The season reset rounds to the nearest whole number, a half up | The reset job |
 | The same opponent is attacked at most once a day in RANKED and 3 times a day in QUICK | Starting a battle, counting the PLAYED battles of the last 24 hours |

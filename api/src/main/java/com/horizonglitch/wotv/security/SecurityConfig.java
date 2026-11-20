@@ -1,6 +1,7 @@
 package com.horizonglitch.wotv.security;
 
 import com.horizonglitch.wotv.config.AppProperties;
+import com.horizonglitch.wotv.player.PlayerActivityService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -43,7 +45,8 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http,
-			@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) throws Exception {
+			@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver,
+			PlayerActivityService activity) throws Exception {
 		AuthenticationEntryPoint entryPoint = (request, response, e) -> resolver.resolveException(request, response, null, e);
 		AccessDeniedHandler deniedHandler = (request, response, e) -> resolver.resolveException(request, response, null, e);
 
@@ -66,6 +69,7 @@ public class SecurityConfig {
 						.authenticationEntryPoint(entryPoint)
 						.accessDeniedHandler(deniedHandler))
 				.exceptionHandling(e -> e.authenticationEntryPoint(entryPoint).accessDeniedHandler(deniedHandler));
+		http.addFilterAfter(new PlayerActivityFilter(activity), BearerTokenAuthenticationFilter.class);
 		return http.build();
 	}
 
