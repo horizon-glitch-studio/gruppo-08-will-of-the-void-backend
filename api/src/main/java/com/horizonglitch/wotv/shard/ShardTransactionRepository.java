@@ -17,6 +17,15 @@ public interface ShardTransactionRepository extends JpaRepository<ShardTransacti
 
 	boolean existsByPlayer_IdAndReasonAndCreatedAtAfter(Long playerId, ShardReason reason, Instant after);
 
+	boolean existsByPlayer_IdAndReason(Long playerId, ShardReason reason);
+
+	boolean existsByInvitedPlayer_Id(Long invitedPlayerId);
+
+	boolean existsByPlayer_IdAndReasonAndSeason_IdAndOrbit(Long playerId, ShardReason reason, Integer seasonId,
+			Short orbit);
+
+	boolean existsByPlayer_IdAndReasonAndSeason_Id(Long playerId, ShardReason reason, Integer seasonId);
+
 	/**
 	 * Atomic change of the balance, never below 0: returns 1 if applied, 0 if the balance was too low. The
 	 * balance is never written through the entity (see Player).

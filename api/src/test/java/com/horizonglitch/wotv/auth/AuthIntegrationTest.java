@@ -115,6 +115,38 @@ class AuthIntegrationTest {
 	}
 
 	@Test
+	void grantsInviteBonusWhenVerifiedInviteeHasPlayedTenDifferentOpponents() throws Exception {
+		String inviter = uniqueName();
+		register(inviter, inviter + "@example.com").andExpect(status().isCreated());
+		String inviteCode = jdbc.queryForObject("select invite_code from player where username = ?", String.class, inviter);
+
+		String invited = uniqueName();
+		String invitedEmail = invited + "@example.com";
+		registerWithInvite(invited, inviteCode).andExpect(status().isCreated());
+		Long invitedId = jdbc.queryForObject("select id from player where username = ?", Long.class, invited);
+		Long inviterId = jdbc.queryForObject("select id from player where username = ?", Long.class, inviter);
+		for (int i = 0; i < 10; i++) {
+			String opponent = uniqueName();
+			String opponentCode = "VOID-" + opponent.substring(2, 10);
+			Long opponentId = jdbc.queryForObject("insert into player (username, email, password_hash, invite_code) "
+					+ "values (?, ?, 'unused', ?) returning id", Long.class, opponent, opponent + "@example.com", opponentCode);
+			jdbc.update("insert into battle (mode, status, challenger_id, opponent_id, outcome, decks_snapshot, played_at) "
+					+ "values ('FRIEND', 'PLAYED', ?, ?, 'DRAW', '{}'::jsonb, now())", invitedId, opponentId);
+		}
+
+		int balanceBefore = balance(inviter);
+		String verificationToken = recorder().lastToken(invitedEmail, "Verify");
+		actionToken("/api/v1/auth/verify-email", verificationToken).andExpect(status().isNoContent());
+
+		int inviteBonus = properties.economy().dailyBonus() * properties.economy().inviteBonusMultiplier();
+		assertThat(balance(inviter)).isEqualTo(balanceBefore + inviteBonus);
+		assertThat(jdbc.queryForObject("select count(*) from shard_transaction where player_id = ? "
+				+ "and reason = 'INVITE_BONUS' and invited_player_id = ?", Integer.class, inviterId, invitedId)).isEqualTo(1);
+		assertThat(jdbc.queryForObject("select count(*) from notification where player_id = ? and type = 'INVITE_BONUS'",
+				Integer.class, inviterId)).isEqualTo(1);
+	}
+
+	@Test
 	void loginGivesTheDailyBonusOncePerDay() throws Exception {
 		String name = uniqueName();
 		register(name, name + "@example.com").andExpect(status().isCreated());
@@ -147,6 +179,16 @@ class AuthIntegrationTest {
 				.andExpect(jsonPath("$.dailyBonus.granted").value(true))
 				.andExpect(jsonPath("$.comebackBonus.granted").value(true))
 				.andExpect(jsonPath("$.comebackBonus.amount").value(comeback));
+		Long playerId = jdbc.queryForObject("select id from player where username = ?", Long.class, name);
+		assertThat(jdbc.queryForObject("select count(*) from shard_transaction where player_id = ? "
+				+ "and reason = 'DAILY_BONUS'", Integer.class, playerId)).isEqualTo(2);
+		assertThat(jdbc.queryForObject("select count(*) from shard_transaction where player_id = ? "
+				+ "and reason = 'COMEBACK_BONUS'", Integer.class, playerId)).isEqualTo(1);
+		assertThat(jdbc.queryForList("select amount from shard_transaction where player_id = ? "
+				+ "and reason = 'DAILY_BONUS' order by id", Integer.class, playerId))
+				.containsExactly(properties.economy().dailyBonus(), properties.economy().dailyBonus());
+		assertThat(jdbc.queryForObject("select amount from shard_transaction where player_id = ? "
+				+ "and reason = 'COMEBACK_BONUS'", Integer.class, playerId)).isEqualTo(comeback);
 
 		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days' where username = ?", name);
 		login(name).andExpect(status().isOk())

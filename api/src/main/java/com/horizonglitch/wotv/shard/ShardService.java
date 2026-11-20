@@ -1,5 +1,6 @@
 package com.horizonglitch.wotv.shard;
 
+import com.horizonglitch.wotv.battle.BattleStatsService;
 import com.horizonglitch.wotv.common.ApiException;
 import com.horizonglitch.wotv.common.PageResponse;
 import com.horizonglitch.wotv.common.Paging;
@@ -8,6 +9,8 @@ import com.horizonglitch.wotv.notification.NotificationService;
 import com.horizonglitch.wotv.notification.NotificationType;
 import com.horizonglitch.wotv.pack.PackOpening;
 import com.horizonglitch.wotv.player.Player;
+import com.horizonglitch.wotv.season.Orbit;
+import com.horizonglitch.wotv.season.Season;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,17 +30,76 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ShardService {
 
+	private record Credit(ShardReason reason, int amount, Season season, Short orbit, Player invitedPlayer,
+			NotificationType notificationType) {
+	}
+
 	private final ShardTransactionRepository transactions;
+	private final BattleStatsService battleStats;
 	private final NotificationService notifications;
 	private final AppProperties.Economy economy;
 	private final Clock clock;
 
-	public ShardService(ShardTransactionRepository transactions, NotificationService notifications,
+	public ShardService(ShardTransactionRepository transactions, BattleStatsService battleStats, NotificationService notifications,
 			AppProperties properties, Clock clock) {
 		this.transactions = transactions;
+		this.battleStats = battleStats;
 		this.notifications = notifications;
 		this.economy = properties.economy();
 		this.clock = clock;
+	}
+
+	/** ECO-10: awards an inviter after the invited Summoner verifies email and plays against 10 distinct opponents. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void grantInviteBonusIfEligible(Player invitedPlayer) {
+		Player inviter = invitedPlayer.getInvitedBy();
+		if (inviter == null || invitedPlayer.getEmailVerifiedAt() == null
+				|| battleStats.distinctPlayedOpponents(invitedPlayer.getId()) < 10
+				|| transactions.existsByInvitedPlayer_Id(invitedPlayer.getId())) {
+			return;
+		}
+
+		grant(inviter, ShardReason.INVITE_BONUS, economy.dailyBonus() * economy.inviteBonusMultiplier(),
+				null, null, invitedPlayer, NotificationType.INVITE_BONUS);
+	}
+
+	/** ECO-07: grants the verification bonus once, when the email verification token is consumed. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void grantEmailVerificationBonus(Player player) {
+		if (transactions.existsByPlayer_IdAndReason(player.getId(), ShardReason.EMAIL_BONUS)) {
+			return;
+		}
+		grant(player, ShardReason.EMAIL_BONUS, economy.dailyBonus() * economy.emailBonusMultiplier());
+	}
+
+	/** RANK-11: grants a reached Orbit once per Summoner and season. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void grantOrbitRewardIfEligible(Player player, Season season, Orbit reachedOrbit) {
+		short orbit = (short) (reachedOrbit.ordinal() + 1);
+		if (reachedOrbit == Orbit.ORBIT_1 || transactions.existsByPlayer_IdAndReasonAndSeason_IdAndOrbit(
+				player.getId(), ShardReason.ORBIT_REWARD, season.getId(), orbit)) {
+			return;
+		}
+
+		grant(player, ShardReason.ORBIT_REWARD, economy.dailyBonus() * economy.orbitRewardMultiplier(), season, orbit,
+				null, NotificationType.ORBIT_REWARD);
+	}
+
+	/** RANK-09: rewards active Summoners according to their Orbit before the season reset. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void grantSeasonReward(Player player, Season season, Orbit finalOrbit) {
+		if (transactions.existsByPlayer_IdAndReasonAndSeason_Id(player.getId(), ShardReason.SEASON_REWARD,
+				season.getId())) {
+			return;
+		}
+		int multiplier = switch (finalOrbit) {
+			case ORBIT_1 -> economy.seasonRewardOrbit1Multiplier();
+			case ORBIT_2 -> economy.seasonRewardOrbit2Multiplier();
+			case ORBIT_3 -> economy.seasonRewardOrbit3Multiplier();
+			case ORBIT_4 -> economy.seasonRewardOrbit4Multiplier();
+		};
+		grant(player, ShardReason.SEASON_REWARD, economy.dailyBonus() * multiplier, season, null, null,
+				NotificationType.SEASON_REWARD);
 	}
 
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -66,12 +128,11 @@ public class ShardService {
 		if (longAbsence && !transactions.existsByPlayer_IdAndReasonAndCreatedAtAfter(lockedPlayer.getId(),
 				ShardReason.COMEBACK_BONUS, now.minus(Duration.ofDays(economy.comebackIntervalDays())))) {
 			comeback = economy.dailyBonus() * economy.comebackBonusMultiplier();
-			grant(lockedPlayer, ShardReason.COMEBACK_BONUS, comeback);
-			notifications.notify(lockedPlayer, NotificationType.COMEBACK_BONUS);
+			grantComebackBonus(lockedPlayer, comeback);
 		}
 
 		int daily = economy.dailyBonus();
-		grant(lockedPlayer, ShardReason.DAILY_BONUS, daily);
+		grantDailyBonus(lockedPlayer, daily);
 		lockedPlayer.setLastDailyBonusAt(now);
 		return new LoginBonuses(daily, comeback);
 	}
@@ -111,11 +172,36 @@ public class ShardService {
 	}
 
 	private void grant(Player player, ShardReason reason, int amount) {
+		grant(player, new Credit(reason, amount, null, null, null, null));
+	}
+
+	private void grant(Player player, ShardReason reason, int amount, Season season, Short orbit,
+			Player invitedPlayer, NotificationType notificationType) {
+		grant(player, new Credit(reason, amount, season, orbit, invitedPlayer, notificationType));
+	}
+
+	private void grantComebackBonus(Player player, int amount) {
+		grant(player, new Credit(ShardReason.COMEBACK_BONUS, amount, null, null, null,
+				NotificationType.COMEBACK_BONUS));
+	}
+
+	private void grantDailyBonus(Player player, int amount) {
+		grant(player, new Credit(ShardReason.DAILY_BONUS, amount, null, null, null, null));
+	}
+
+	/** Writes one history movement and performs one atomic balance update for its reason. */
+	private void grant(Player player, Credit credit) {
 		ShardTransaction transaction = new ShardTransaction();
 		transaction.setPlayer(player);
-		transaction.setReason(reason);
-		transaction.setAmount(amount);
+		transaction.setReason(credit.reason());
+		transaction.setAmount(credit.amount());
+		transaction.setSeason(credit.season());
+		transaction.setOrbit(credit.orbit());
+		transaction.setInvitedPlayer(credit.invitedPlayer());
 		transactions.save(transaction);
-		transactions.addToBalance(player.getId(), amount);
+		transactions.addToBalance(player.getId(), credit.amount());
+		if (credit.notificationType() != null) {
+			notifications.notify(player, credit.notificationType());
+		}
 	}
 }

@@ -152,9 +152,11 @@ public class AuthService {
 	public void verifyEmail(String token) {
 		PlayerToken used = tokenService.consume(token, TokenType.EMAIL_VERIFICATION)
 				.orElseThrow(AuthService::actionTokenInvalid);
-		Player player = used.getPlayer();
+		Player player = playerService.lockById(used.getPlayer().getId());
 		if (player.getEmailVerifiedAt() == null) {
 			player.setEmailVerifiedAt(clock.instant());
+			shardService.grantEmailVerificationBonus(player);
+			shardService.grantInviteBonusIfEligible(player);
 		}
 	}
 

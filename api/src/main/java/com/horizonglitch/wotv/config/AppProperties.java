@@ -6,7 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Settings under {@code app.*} in application.properties. */
 @ConfigurationProperties("app")
-public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens tokens, Economy economy, Decks decks, Packs packs, Trades trades, Battles battles, Matchmaking matchmaking) {
+public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens tokens, Economy economy, Decks decks,
+		Packs packs, Trades trades, Battles battles, Matchmaking matchmaking, Seasons seasons) {
 
 	public record Cors(List<String> allowedOrigins) {
 	}
@@ -31,7 +32,7 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 	 * Trades (rules/trades.md): a proposal lasts {@code expiry} (TRADE_EXPIRY_HOURS) and nobody can be left with
 	 * fewer than {@code minCollectionSize} permanent cards (MIN_COLLECTION_SIZE).
 	 */
-	public record Trades(java.time.Duration expiry, int minCollectionSize) {
+	public record Trades(java.time.Duration expiry, int minCollectionSize, Duration expiryCheckInterval) {
 	}
 
 	/**
@@ -40,7 +41,8 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 	 * (CHALLENGE_EXPIRY_HOURS) and a replay can be watched for {@code replayRetention} (REPLAY_RETENTION_DAYS).
 	 */
 	public record Battles(int winThresholdFriend, int winThresholdRanked, int winThresholdQuick, int endBonusPerCard,
-			int eloK, Duration challengeExpiry, Duration replayRetention) {
+			int eloK, Duration challengeExpiry, Duration replayRetention, Duration expiryCheckInterval,
+			Duration replayCleanupInterval) {
 	}
 
 	/**
@@ -50,6 +52,10 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 	public record Matchmaking(int listSize, Duration refreshCooldown, Duration quickActive, List<Integer> trophyRanges,
 			int rankedAttacksPerOpponent, int quickAttacksPerOpponent, Duration attackWindow,
 			int shieldTriggerAttacks, Duration shieldWindow, Duration shieldDuration) {
+	}
+
+	/** Season rollover parameters from rules/ranking.md. */
+	public record Seasons(int lengthWeeks, int resetThreshold, Duration resetCheckInterval) {
 	}
 
 	/** Deck limits of rules/decks.md: DECK_SIZE, MAX_PER_FACTION and MAX_SAVED_DECKS. */
@@ -63,6 +69,13 @@ public record AppProperties(String frontendUrl, Cors cors, Jwt jwt, Tokens token
 			int comebackBonusMultiplier,
 			int comebackAbsenceDays,
 			int comebackIntervalDays,
-			int timezoneChangeDays) {
+			int timezoneChangeDays,
+			int emailBonusMultiplier,
+			int inviteBonusMultiplier,
+			int orbitRewardMultiplier,
+			int seasonRewardOrbit1Multiplier,
+			int seasonRewardOrbit2Multiplier,
+			int seasonRewardOrbit3Multiplier,
+			int seasonRewardOrbit4Multiplier) {
 	}
 }
