@@ -4,10 +4,14 @@ import com.horizonglitch.wotv.player.Player;
 import com.horizonglitch.wotv.player.PlayerRepository;
 import com.horizonglitch.wotv.shard.ShardService;
 import com.horizonglitch.wotv.config.AppProperties;
+import com.horizonglitch.wotv.common.PageResponse;
+import com.horizonglitch.wotv.common.Paging;
+import com.horizonglitch.wotv.common.ApiException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +37,30 @@ public class SeasonService {
 	@Transactional(readOnly = true)
 	public Optional<Season> currentAt(Instant instant) {
 		return seasons.findCurrentAt(instant);
+	}
+
+	/** RANK-12 to RANK-14: only active-season Ranked participants are listed. */
+	@Transactional(readOnly = true)
+	public PageResponse<LeaderboardEntry> leaderboard(Orbit orbit, Integer page, Integer size, Instant now) {
+		Season season = seasons.findCurrentAt(now).orElseThrow(() -> new ApiException(
+				org.springframework.http.HttpStatus.NOT_FOUND, "SEASON_NOT_FOUND", "There is no current season."));
+		Integer minTrophies = orbit == null ? null : orbit.minTrophies();
+		Integer maxTrophies = orbit == null || orbit == Orbit.ORBIT_4
+				? null : Orbit.values()[orbit.ordinal() + 1].minTrophies() - 1;
+		return PageResponse.of(seasons.findLeaderboard(season.getStartsAt(), season.getEndsAt(), minTrophies,
+				maxTrophies, Paging.of(page, size, Sort.unsorted())), entry -> new LeaderboardEntry(entry.getPosition(),
+				entry.getPlayerId(), entry.getUsername(), entry.getAvatar(), entry.getTrophies(),
+				Orbit.fromTrophies(entry.getTrophies())));
+	}
+
+	public record LeaderboardEntry(long position, long id, String username, String avatar, int trophies, Orbit orbit) {}
+	public record CurrentSeason(int id, Instant startsAt, Instant endsAt) {}
+
+	@Transactional(readOnly = true)
+	public CurrentSeason current(Instant now) {
+		Season season = seasons.findCurrentAt(now).orElseThrow(() -> new ApiException(
+				org.springframework.http.HttpStatus.NOT_FOUND, "SEASON_NOT_FOUND", "There is no current season."));
+		return new CurrentSeason(season.getId(), season.getStartsAt(), season.getEndsAt());
 	}
 
 	/** RANK-08, RANK-09: rewards eligible Summoners, records their final standings, resets Trophies and rolls over. */
