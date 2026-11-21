@@ -35,6 +35,15 @@ public class SeasonService {
 		return seasons.findCurrentAt(instant);
 	}
 
+	/**
+	 * RANK-08: the trophies above {@code threshold} are halved, rounded to the nearest whole number with a half
+	 * rounded up (1201 becomes 1101). Summoners at the threshold or below keep their trophies. The same formula is
+	 * applied in SQL by {@link PlayerRepository#resetTrophiesAbove(int)}.
+	 */
+	public static int trophiesAfterReset(int trophies, int threshold) {
+		return trophies > threshold ? threshold + (trophies - threshold + 1) / 2 : trophies;
+	}
+
 	/** RANK-08, RANK-09: rewards eligible Summoners, records their final standings, resets Trophies and rolls over. */
 	@Transactional
 	public boolean closeNextEndedSeason(Instant now) {
@@ -52,9 +61,7 @@ public class SeasonService {
 		for (SeasonRepository.Standing standing : standings) {
 			Player player = playersById.get(standing.getPlayerId());
 			int trophiesBefore = standing.getTrophies();
-			int threshold = settings.resetThreshold();
-			int trophiesAfter = trophiesBefore > threshold
-					? threshold + (trophiesBefore - threshold) / 2 : trophiesBefore;
+			int trophiesAfter = trophiesAfterReset(trophiesBefore, settings.resetThreshold());
 			SeasonResult result = new SeasonResult();
 			result.setSeason(season);
 			result.setPlayer(player);
