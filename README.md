@@ -55,7 +55,7 @@ Inside a package, classes are named after their role: `Deck` (entity), `DeckRepo
 - Copy `.env.example` to `.env` and adjust the environment variables as needed.
 - To run the API from IntelliJ, start `WillofthevoidApplication`: Spring Boot's Docker Compose support starts the database from `compose.yaml` and connects to it, and the API reads the variables of `.env` (such as `APP_JWT_SECRET`) by itself. JDK 25 is required.
 - To run everything in Docker instead, run `docker compose --profile app up -d --build` to build and start the database and the backend.
-- The backend is available at [http://localhost:8080](http://localhost:8080/).
+- The backend is available at [http://localhost:8080](http://localhost:8080/) (Swagger UI: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
 - Run `docker compose --profile app down` to stop the containers. Add `-v` to delete the database too, which is needed when `V1__init.sql` changes before the first release.
 
 ### Environment variables
