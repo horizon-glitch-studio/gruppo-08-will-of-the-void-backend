@@ -11,6 +11,7 @@ import com.horizonglitch.wotv.common.mail.EmailSender;
 import com.horizonglitch.wotv.config.AppProperties;
 import com.horizonglitch.wotv.deck.DeckService;
 import com.horizonglitch.wotv.pack.PackGuaranteeService;
+import com.horizonglitch.wotv.player.PlayerActivityService;
 import com.horizonglitch.wotv.player.Player;
 import com.horizonglitch.wotv.player.PlayerService;
 import com.horizonglitch.wotv.shard.LoginBonuses;
@@ -33,6 +34,7 @@ public class AuthService {
 			"me", "admin", "administrator", "root", "system", "support", "moderator", "null", "undefined");
 
 	private final PlayerService playerService;
+	private final PlayerActivityService playerActivityService;
 	private final ShardService shardService;
 	private final StarterDeckService starterDeckService;
 	private final CollectionService collectionService;
@@ -45,11 +47,13 @@ public class AuthService {
 	private final Clock clock;
 	private final String dummyHash;
 
-	public AuthService(PlayerService playerService, ShardService shardService, StarterDeckService starterDeckService,
+	public AuthService(PlayerService playerService, PlayerActivityService playerActivityService, ShardService shardService,
+			StarterDeckService starterDeckService,
 			CollectionService collectionService, DeckService deckService, PackGuaranteeService packGuaranteeService,
 			TokenService tokenService, PasswordEncoder passwordEncoder, EmailSender emailSender,
 			AppProperties properties, Clock clock) {
 		this.playerService = playerService;
+		this.playerActivityService = playerActivityService;
 		this.shardService = shardService;
 		this.starterDeckService = starterDeckService;
 		this.collectionService = collectionService;
@@ -116,6 +120,7 @@ public class AuthService {
 		}
 
 		Player player = playerService.lockById(found.getId());
+		playerActivityService.record(player);
 		LoginBonuses bonuses = shardService.grantLoginBonuses(player);
 		TokenService.IssuedTokens tokens = tokenService.issue(player);
 
@@ -126,12 +131,22 @@ public class AuthService {
 				AuthResponses.Bonus.of(bonuses.daily()), AuthResponses.Bonus.of(bonuses.comeback()));
 	}
 
+	/** Claims due rewards after authenticated activity has recorded any return from an absence. */
+	@Transactional
+	public AuthResponses.DailyBonuses claimDailyBonuses(long playerId) {
+		Player player = playerService.lockById(playerId);
+		LoginBonuses bonuses = shardService.grantLoginBonuses(player);
+		return new AuthResponses.DailyBonuses(AuthResponses.Bonus.of(bonuses.daily()),
+				AuthResponses.Bonus.of(bonuses.comeback()));
+	}
+
 	/** Rotation: the refresh token is used once and replaced by a new one. */
 	@Transactional
 	public AuthResponses.Tokens refresh(String refreshToken) {
 		PlayerToken used = tokenService.consume(refreshToken, TokenType.REFRESH)
 				.orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "TOKEN_INVALID",
 						"The refresh token is invalid, expired or already used."));
+		playerActivityService.record(used.getPlayer().getId());
 		TokenService.IssuedTokens tokens = tokenService.issue(used.getPlayer());
 		return new AuthResponses.Tokens("Bearer", tokens.accessToken(), tokens.accessTokenExpiresIn(),
 				tokens.refreshToken(), tokens.refreshTokenExpiresIn());

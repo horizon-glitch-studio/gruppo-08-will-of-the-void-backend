@@ -119,7 +119,7 @@ Errors: 400 `VALIDATION_FAILED`, 400 `INVITE_CODE_INVALID`, 409 `USERNAME_ALREAD
 
 ### 1.2 Login
 
-Accepts either a username or email in the same field. If this is the player's first login of the day (in the player's time zone), the daily bonus is granted.
+Accepts either a username or email in the same field. If due, login grants the daily and comeback bonuses and returns their details. Logged-in players claim due bonuses with `POST /auth/daily-bonus`. Refreshing a token alone does not grant bonuses.
 
 - **URL:** `/auth/login`
 - **Method:** `POST`
@@ -160,7 +160,7 @@ Request:
 }
 ```
 
-`expiresIn` is in seconds. If the bonus was already claimed today: `"dailyBonus": { "granted": false, "amount": 0 }`. `comebackBonus` is granted on top of the daily bonus at the first login after at least 7 days without playing, at most once every 30 days; otherwise `{ "granted": false, "amount": 0 }`. Numeric values in the example are illustrative.
+`expiresIn` is in seconds. If the bonus was already claimed today: `"dailyBonus": { "granted": false, "amount": 0 }`. `comebackBonus` is granted on top of the daily bonus after at least 7 days without an authenticated request, at most once every 30 days; otherwise `{ "granted": false, "amount": 0 }`. Numeric values in the example are illustrative.
 
 Errors: 400 `VALIDATION_FAILED`, 401 `INVALID_CREDENTIALS`. Attempt limits and the corresponding 429 response are deferred to phase 2.
 
@@ -182,7 +182,27 @@ Request:
 
 Errors: 401 `TOKEN_INVALID`.
 
-### 1.4 Logout
+### 1.4 Daily reward claim
+
+Claims any daily and comeback bonuses due for the authenticated player. Repeated claims do not grant a bonus twice. Comeback eligibility is retained when activity tracking detects the return before this claim.
+
+- **URL:** `/auth/daily-bonus`
+- **Method:** `POST`
+- **Authentication:** required
+- **Request:** no body
+
+**200 OK** response:
+
+```json
+{
+  "dailyBonus": { "granted": true, "amount": 100 },
+  "comebackBonus": { "granted": false, "amount": 0 }
+}
+```
+
+Uses the same response format as login. Each reason is recorded as a separate Shard transaction. Errors: 401 `TOKEN_INVALID`.
+
+### 1.5 Logout
 
 Invalidates the refresh token. The access token is stateless and remains valid until it expires.
 
@@ -198,7 +218,7 @@ Request:
 
 **204 No Content** response.
 
-### 1.5 Email verification
+### 1.6 Email verification
 
 - **URL:** `/auth/verify-email`
 - **Method:** `POST`
@@ -212,7 +232,7 @@ Request:
 
 **204 No Content** response. Errors: 400 `ACTION_TOKEN_INVALID`.
 
-### 1.6 Resend verification email
+### 1.7 Resend verification email
 
 - **URL:** `/auth/resend-verification`
 - **Method:** `POST`
@@ -220,7 +240,7 @@ Request:
 
 No body. **204 No Content** response. Returns 204 even if the email is already verified.
 
-### 1.7 Forgot password
+### 1.8 Forgot password
 
 Always returns the same response, whether or not the email exists, to avoid revealing which email addresses are registered.
 
@@ -236,7 +256,7 @@ Request:
 
 **202 Accepted** response (no body). Errors: 400 `VALIDATION_FAILED`. Attempt limits and the corresponding 429 response are deferred to phase 2.
 
-### 1.8 Reset password
+### 1.9 Reset password
 
 - **URL:** `/auth/reset-password`
 - **Method:** `POST`

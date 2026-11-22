@@ -19,6 +19,9 @@ public final class AuthResponses {
 			long refreshTokenExpiresIn, PlayerSummary player, Bonus dailyBonus, Bonus comebackBonus) {
 	}
 
+	public record DailyBonuses(Bonus dailyBonus, Bonus comebackBonus) {
+	}
+
 	public record PlayerSummary(Long id, String username, PlayerRole role, boolean emailVerified) {
 	}
 

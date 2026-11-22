@@ -39,6 +39,20 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
 	@Query("select p from Player p where p.id = :id and p.deletedAt is null")
 	Optional<Player> lockById(@Param("id") Long id);
 
+	/** Records authenticated activity at most once per hour without loading or locking the player entity. */
+	@Modifying
+	@Query(value = "UPDATE player SET comeback_eligible = comeback_eligible OR "
+			+ "(last_active_at IS NOT NULL AND last_active_at <= :comebackBefore), last_active_at = :now "
+			+ "WHERE id = :id AND deleted_at IS NULL "
+			+ "AND (last_active_at IS NULL OR last_active_at <= :writeAfter)", nativeQuery = true)
+	int touchLastActiveAt(@Param("id") Long id, @Param("now") Instant now,
+			@Param("writeAfter") Instant writeAfter, @Param("comebackBefore") Instant comebackBefore);
+
+	/** Clears the pending comeback after it has been granted; this database-owned field is never written by JPA. */
+	@Modifying(flushAutomatically = true)
+	@Query(value = "UPDATE player SET comeback_eligible = false WHERE id = :id", nativeQuery = true)
+	int clearComebackEligibility(@Param("id") Long id);
+
 	/** The current trophies, read from the database: the entity may hold an older value. */
 	@Query(value = "SELECT trophies FROM player WHERE id = :id", nativeQuery = true)
 	int trophiesOf(@Param("id") Long id);
@@ -101,7 +115,7 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
 	@Query(value = """
 			SELECT p.id AS id, p.trophies AS trophies
 			FROM player p
-			WHERE p.deleted_at IS NULL AND p.id <> :playerId AND p.last_daily_bonus_at >= :activeSince
+			WHERE p.deleted_at IS NULL AND p.id <> :playerId AND p.last_active_at >= :activeSince
 			ORDER BY random() LIMIT :size
 			""", nativeQuery = true)
 	List<Candidate> findQuickCandidates(@Param("playerId") Long playerId, @Param("activeSince") Instant activeSince,

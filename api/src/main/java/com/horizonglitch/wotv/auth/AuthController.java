@@ -39,6 +39,12 @@ public class AuthController {
 		return authService.login(request);
 	}
 
+	@Operation(summary = "Claim due daily and comeback bonuses", security = @SecurityRequirement(name = "bearer"))
+	@PostMapping("/daily-bonus")
+	public AuthResponses.DailyBonuses claimDailyBonuses(@AuthenticationPrincipal Jwt jwt) {
+		return authService.claimDailyBonuses(CurrentPlayer.id(jwt));
+	}
+
 	@Operation(summary = "Exchange a refresh token for a new token pair")
 	@PostMapping("/refresh")
 	public AuthResponses.Tokens refresh(@Valid @RequestBody AuthRequests.RefreshToken request) {
