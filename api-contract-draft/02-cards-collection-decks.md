@@ -4,7 +4,7 @@ Prefix: `/api/v1`. Models are based on `card`, `faction`, `rarity`, `collection_
 
 ## Card model
 
-The exposed card includes `id`, `name`, `description`, `imageUrl`, `faction`, `rarity`, `attack`, and `defense`. The public catalog returns active cards only; inactive cards are managed through the admin endpoints. Copies of an inactive card already owned stay in the collection and can still be used in decks and battles. `faction` contains an ID and name; `rarity` contains a name, order, and copy limits relevant to the client. Pack odds are not part of the card.
+The exposed card includes `id`, `name`, `description`, `imageUrl`, `faction`, `rarity`, `attack`, and `defense`. The public catalog returns active cards only; inactive cards are managed through the admin endpoints. Copies of an inactive card already owned stay in the collection and can still be used in decks and battles. `faction` contains an ID and name; `rarity` contains a name, order, and copy limits relevant to the client. Pack odds are not part of the card. `imageUrl` is the path of the image without width and extension: the server publishes it in three widths, `<imageUrl>-320w.webp`, `<imageUrl>-640w.webp` and `<imageUrl>-848w.webp`, so the client can build a `srcset` such as `/cards/lava/basaltaur-320w.webp 320w, /cards/lava/basaltaur-640w.webp 640w, /cards/lava/basaltaur-848w.webp 848w`. The images are public and need no token.
 
 ## Catalog
 
@@ -28,7 +28,7 @@ Example collection item:
 
 ```json
 {
-  "card": { "id": 42, "name": "Aster", "imageUrl": "/cards/42.png", "faction": { "id": 8, "name": "Noble Gas" }, "rarity": { "id": 6, "name": "Wanderer" }, "attack": 18, "defense": 14 },
+  "card": { "id": 42, "name": "Cetargos", "imageUrl": "/cards/noble-gas/cetargos", "faction": { "id": 8, "name": "Noble Gas" }, "rarity": { "id": 6, "name": "Wanderer" }, "attack": 18, "defense": 14 },
   "quantity": 1,
   "acquiredAt": "2026-11-08T16:00:00Z",
   "expiresAt": "2026-11-15T16:00:00Z"
