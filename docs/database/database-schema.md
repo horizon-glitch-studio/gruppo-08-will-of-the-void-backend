@@ -172,7 +172,7 @@ Seven columns of `player` are not relationships but support game rules: `protect
 
 **Shards and trophies are changed with atomic UPDATEs.** A player's trophies change when someone else attacks them, so the `player` row is updated by requests the player does not control. To avoid lost updates and conflicts, `shard_balance` and `trophies` are never written through the JPA entity: they change only with statements such as `UPDATE player SET shard_balance = shard_balance - :cost WHERE id = :id AND shard_balance >= :cost`, and the service checks that one row was updated. In the entity the two columns are mapped with `@Column(insertable = false, updatable = false)`. The service also clamps the Elo result at 0, because `trophies >= 0` is a CHECK constraint. `version` (optimistic locking) protects only the profile data.
 
-**`shard_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, ORBIT_REWARD has `season_id`, `orbit` (2 to 4) and a positive amount, REGISTRATION_BONUS, DAILY_BONUS and COMEBACK_BONUS have none of these columns and a positive amount. The partial unique index `uq_shard_registration_bonus` allows only one registration bonus per player.
+**`shard_transaction` is consistent with its reason.** A CHECK constraint ties each reason to its columns: PACK_PURCHASE has `pack_opening_id` and a negative amount, INVITE_BONUS has `invited_player_id` and a positive amount, SEASON_REWARD has `season_id` and a positive amount, ORBIT_REWARD has `season_id`, `orbit` (2 to 4) and a positive amount, REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS and EMAIL_BONUS have none of these columns and a positive amount. The partial unique indexes `uq_shard_registration_bonus` and `uq_shard_email_bonus` allow only one registration bonus and one email verification bonus per player.
 
 **The daily bonus follows the player's day, not the server's.** `timezone` holds the player's IANA time zone (for example `Europe/Rome`), read from the browser at registration and checked by the backend. The time always comes from the server clock, converted to the player's time zone, so changing the computer clock does not give a second bonus. A single atomic UPDATE sets `last_daily_bonus_at` only if the last bonus fell on an earlier day in the player's calendar, `(last_daily_bonus_at AT TIME ZONE timezone)::date < (now() AT TIME ZONE timezone)::date`; if one row was updated, the service adds the DAILY_BONUS transaction. The new bonus is therefore available from midnight in the player's time zone.
 
@@ -184,7 +184,7 @@ Seven columns of `player` are not relationships but support game rules: `protect
 
 **Comeback bonus.** A player who returns after at least 7 days without an authenticated request gets a comeback bonus worth 3 daily bonuses, at most once every 30 days, on top of the daily bonus of that day. `comeback_eligible` records that the inactivity threshold was crossed; the cooldown is checked against the player's last COMEBACK_BONUS row in `shard_transaction`. The player row is locked so simultaneous logins or claims cannot grant the reward twice. The player also receives a COMEBACK_BONUS notification, which can mention a season reset that happened while they were away (`season_result`). The three values (7 days, 3 daily bonuses, 30 days) are backend settings.
 
-In phase 1 Shards come from six sources: the registration bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. They are spent on packs.
+In phase 1 Shards come from seven sources: the registration bonus, the email verification bonus, the daily login bonus, the comeback bonus, the invite bonus, the season reward and the Orbit reward. They are spent on packs.
 
 **Every bonus is a multiple of the daily bonus.** The daily bonus is the only amount in Shards; every other reward is the daily bonus times a multiplier, so changing one value keeps the whole economy in proportion. All of them are backend settings, and `shard_transaction.amount` stores the Shards actually given, so past rows stay correct when a multiplier changes.
 
@@ -192,12 +192,13 @@ In phase 1 Shards come from six sources: the registration bonus, the daily login
 | --- | --- | --- |
 | DAILY_BONUS | the daily bonus (to be defined) | First login of the day, in the player's time zone |
 | REGISTRATION_BONUS | multiplier to be defined × daily bonus | Once, at registration |
+| EMAIL_BONUS | multiplier to be defined × daily bonus | Once, when the player verifies their email |
 | COMEBACK_BONUS | 3 × daily bonus (to be tested) | Login after at least 7 days of absence, at most once every 30 days |
 | INVITE_BONUS | multiplier to be defined × daily bonus | When the invited player has verified their email and played 10 battles against different opponents |
 | ORBIT_REWARD | multiplier to be defined × daily bonus | The first time in a season that the player reaches a higher Orbit (view 8) |
 | SEASON_REWARD | 1 to 10 × daily bonus, by Orbit (to be tested) | End of season, for players with at least one RANKED battle in it (view 8) |
 
-When the email verification bonus is defined, it will be one more reason in `shard_transaction`, also a multiple of the daily bonus.
+The amounts still to be defined have placeholder values in the backend settings until the rules set them.
 
 ## 2 · Collection and decks
 
@@ -664,9 +665,9 @@ erDiagram
 
 **The reset.** New trophies = 1000 + (trophies − 1000) / 2, only for players above 1000: 1200 becomes 1100, 2000 becomes 1500. Trophies are integers, so the result is rounded to the nearest whole number, with a half rounded up: 1201 becomes 1101 (1100.5 rounded up). In SQL, with integer division, this is `1000 + (trophies - 1000 + 1) / 2`. When `ends_at` has passed, a scheduled job runs in one transaction:
 
-1. It writes a `season_result` row for every player who has not been deleted, with the current trophies, the trophies after the reset and the rank (`rank() OVER (ORDER BY trophies DESC)`).
-2. It lowers `player.trophies` with an atomic UPDATE that subtracts the reduction (`trophies_before - trophies_after`) instead of writing the new value (never going below 0), so a battle finished at the same instant is not lost.
-3. It gives every player the season reward: a SEASON_REWARD row in `shard_transaction` with the season's `season_id`, the Shards added to `shard_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect Shards.
+1. It writes a `season_result` row for every player who has not been deleted and played at least one RANKED battle in the season, with the current trophies, the trophies after the reset and the rank among them (`rank() OVER (ORDER BY trophies DESC)`), the same players as the leaderboard.
+2. It lowers `player.trophies` of every player above 1000, including those with no RANKED battle in the season, with one atomic UPDATE that applies the formula to the value in the row, so a battle finished at the same instant is not lost.
+3. It gives each of these players the season reward: a SEASON_REWARD row in `shard_transaction` with the season's `season_id`, the Shards added to `shard_balance` with an atomic UPDATE, and a SEASON_REWARD notification. Players who played no RANKED battle in the season get nothing, so inactive accounts do not collect Shards.
 4. It sets `season.reset_at`, so the same season is never reset twice, and creates the next season.
 
 **Orbits.** Trophies place every player in one of four Orbits, computed from `player.trophies` and never stored: Orbit 1 from 0 to 199 trophies, Orbit 2 from 200 to 499, Orbit 3 from 500 to 999, Orbit 4 from 1000. The first time in a season that a player reaches an Orbit higher than their current one, they receive an ORBIT_REWARD in `shard_transaction` with the season and the Orbit; `uq_shard_orbit_reward` makes it happen once per Orbit and season, even if the player drops and climbs again. The amount is a multiple of the daily bonus, with the multiplier still to be defined. The Orbits also set the range of trophies of the RANKED opponent list (view 6).
@@ -695,7 +696,7 @@ Enumerated values are `varchar` columns with a CHECK constraint, mapped in Java 
 | Column | Allowed values |
 | --- | --- |
 | player.role | USER, ADMIN (Spring Security adds the `ROLE_` prefix) |
-| shard_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, INVITE_BONUS, PACK_PURCHASE |
+| shard_transaction.reason | REGISTRATION_BONUS, DAILY_BONUS, COMEBACK_BONUS, EMAIL_BONUS, SEASON_REWARD, ORBIT_REWARD, INVITE_BONUS, PACK_PURCHASE |
 | player_token.type | EMAIL_VERIFICATION, PASSWORD_RESET, REFRESH |
 | notification.type | ATTACK_RECEIVED, TRADE_RECEIVED, TRADE_ACCEPTED, TRADE_REJECTED, TRADE_CANCELLED, TRADE_EXPIRED, TRADE_FAILED, WANDERER_DEPARTED, DECK_INVALID, INVITE_BONUS, COMEBACK_BONUS, SEASON_REWARD, ORBIT_REWARD, FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, CHALLENGE_RECEIVED, CHALLENGE_ACCEPTED, CHALLENGE_REJECTED, CHALLENGE_EXPIRED, CHALLENGE_CANCELLED |
 | deck.status | INCOMPLETE, VALID, INVALID |
