@@ -9,6 +9,7 @@ import com.horizonglitch.wotv.common.Paging;
 import com.horizonglitch.wotv.common.ApiException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
@@ -61,6 +62,8 @@ public class SeasonService {
 		Season season = seasons.findCurrentAt(now).orElseThrow(() -> new ApiException(
 				org.springframework.http.HttpStatus.NOT_FOUND, "SEASON_NOT_FOUND", "There is no current season."));
 		return new CurrentSeason(season.getId(), season.getStartsAt(), season.getEndsAt());
+	}
+
 	/**
 	 * RANK-08: the trophies above {@code threshold} are halved, rounded to the nearest whole number with a half
 	 * rounded up (1201 becomes 1101). Summoners at the threshold or below keep their trophies. The same formula is
@@ -79,7 +82,7 @@ public class SeasonService {
 		}
 
 		Season season = pending.get();
-		var standings = seasons.findRankedStandings(season.getStartsAt(), season.getEndsAt());
+		List<SeasonRepository.Standing> standings = seasons.findRankedStandings(season.getStartsAt(), season.getEndsAt());
 		var playerIds = standings.stream().map(SeasonRepository.Standing::getPlayerId).toList();
 		Map<Long, Player> playersById = players.findAllById(playerIds).stream()
 				.collect(java.util.stream.Collectors.toMap(Player::getId, player -> player));
