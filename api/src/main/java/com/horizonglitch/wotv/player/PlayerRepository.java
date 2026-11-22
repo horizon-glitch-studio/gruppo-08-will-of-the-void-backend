@@ -62,10 +62,13 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
 	@Query(value = "UPDATE player SET trophies = GREATEST(trophies + :delta, 0) WHERE id = :id", nativeQuery = true)
 	int addTrophies(@Param("id") Long id, @Param("delta") int delta);
 
-	/** Applies RANK-08 to every Summoner in one database statement. */
+	/**
+	 * Applies RANK-08 to every Summoner in one database statement, with a half rounded up: the same formula as
+	 * {@code SeasonService.trophiesAfterReset}.
+	 */
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
-	@Query(value = "UPDATE player SET trophies = CASE WHEN trophies > :threshold "
-			+ "THEN :threshold + (trophies - :threshold) / 2 ELSE trophies END", nativeQuery = true)
+	@Query(value = "UPDATE player SET trophies = :threshold + (trophies - :threshold + 1) / 2 "
+			+ "WHERE trophies > :threshold", nativeQuery = true)
 	int resetTrophiesAbove(@Param("threshold") int threshold);
 
 	@Query(value = "SELECT protected_until IS NOT NULL AND protected_until > :now FROM player WHERE id = :id",
