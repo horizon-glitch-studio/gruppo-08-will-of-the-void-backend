@@ -63,6 +63,12 @@ public class Player {
 	@Column(name = "last_daily_bonus_at")
 	private Instant lastDailyBonusAt;
 
+	@Column(name = "last_active_at", insertable = false, updatable = false)
+	private Instant lastActiveAt;
+
+	@Column(name = "comeback_eligible", nullable = false, insertable = false, updatable = false)
+	private boolean comebackEligible;
+
 	/** IANA time zone, for example {@code Europe/Rome}. */
 	@Column(nullable = false, length = 64)
 	private String timezone = "Europe/Rome";

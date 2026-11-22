@@ -36,6 +36,12 @@ class ProfileIntegrationTest {
 	@Autowired
 	private JdbcTemplate jdbc;
 
+	@Autowired
+	private PlayerRepository players;
+
+	@Autowired
+	private PlayerActivityService activity;
+
 	private MockMvc mvc;
 
 	@BeforeEach
@@ -118,6 +124,27 @@ class ProfileIntegrationTest {
 				.content("{\"showTextLabels\":true}"), s).andExpect(status().isOk())
 				.andExpect(jsonPath("$.reduceMotion").value(true))
 				.andExpect(jsonPath("$.showTextLabels").value(true));
+	}
+
+	@Test
+	void stalePlayerSaveDoesNotOverwriteDatabaseTrackedActivity() throws Exception {
+		Session s = newPlayer();
+		Player stale = players.findActiveByUsername(s.username).orElseThrow();
+		Long playerId = stale.getId();
+
+		jdbc.update("update player set last_active_at = now() - interval '8 days', comeback_eligible = false where id = ?",
+				playerId);
+		activity.record(playerId);
+
+		stale.setTimezone("Europe/London");
+		players.save(stale);
+
+		assertThat(jdbc.queryForObject("select last_active_at > now() - interval '1 hour' from player where id = ?",
+				Boolean.class, playerId)).isTrue();
+		assertThat(jdbc.queryForObject("select comeback_eligible from player where id = ?", Boolean.class,
+				playerId)).isTrue();
+		assertThat(jdbc.queryForObject("select timezone from player where id = ?", String.class, playerId))
+				.isEqualTo("Europe/London");
 	}
 
 	@Test

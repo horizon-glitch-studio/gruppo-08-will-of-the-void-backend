@@ -124,15 +124,23 @@ class MatchmakingIntegrationTest {
 			others.add(fx.newPlayer());
 		}
 		Player inactive = others.get(0);
-		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days' where id = ?", inactive.id());
+		Player activeWithoutRecentLogin = others.get(1);
+		jdbc.update("update player set last_active_at = now() - interval '8 days'");
+		for (Player candidate : others.subList(1, others.size())) {
+			jdbc.update("update player set last_active_at = now() where id = ?", candidate.id());
+		}
+		jdbc.update("update player set last_active_at = now() - interval '8 days' where id = ?", inactive.id());
+		jdbc.update("update player set last_daily_bonus_at = now() - interval '8 days' where id = ?",
+				activeWithoutRecentLogin.id());
 
 		String list = body(fx.authed(get("/api/v1/matchmaking/opponents").param("mode", "QUICK"), me)
 				.andExpect(status().isOk()).andExpect(jsonPath("$.opponents.length()").value(5)));
 		List<Integer> ids = JsonPath.read(list, "$.opponents[*].opponent.id");
 		assertThat(ids).doesNotHaveDuplicates().doesNotContain((int) me.id(), (int) inactive.id());
+		assertThat(ids).contains((int) activeWithoutRecentLogin.id());
 		for (int opponentId : ids) {
 			// MODE-14: active in the last 7 days
-			assertThat(jdbc.queryForObject("select deleted_at is null and last_daily_bonus_at > now() - interval "
+			assertThat(jdbc.queryForObject("select deleted_at is null and last_active_at > now() - interval "
 					+ "'7 days' from player where id = ?", Boolean.class, opponentId)).isTrue();
 		}
 
