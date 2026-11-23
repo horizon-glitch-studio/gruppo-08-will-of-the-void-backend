@@ -51,9 +51,9 @@ Specific errors: `BATTLE_NOT_FOUND` 404, `BATTLE_FORBIDDEN` 403, `BATTLE_NOT_PEN
 
 ## Leaderboard and seasons
 
-Not implemented yet.
-
 | Method | Route | Auth | Result |
 |---|---|---|---|
 | GET | `/leaderboard` | yes | paginated; optional `orbit` filter; only players with at least one RANKED battle in the current season |
 | GET | `/seasons/current` | yes | current season with start and end dates |
+
+Leaderboard items contain `position`, `id`, `username`, `avatar`, `trophies` and `orbit`. Equal Trophy totals share `position`; the optional Orbit filter returns positions within that Orbit. Pagination follows the common `page`/`size` convention.
