@@ -43,6 +43,45 @@ services:
       - APP_CORS_ALLOWED_ORIGINS=${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
     ports:
       - "${SPRING_LOCAL_PORT}:${SPRING_DOCKER_PORT}"
+
+  # JDK 25 and Maven in a container, for anyone without Java installed. Started only with
+  # "docker compose run --rm maven ...": the sources are mounted, so it always builds the current code.
+  maven:
+    profiles: ["tools"]
+    image: eclipse-temurin:25-jdk
+    working_dir: /workspace
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      # Same settings as the CI: the tests use their own empty database, never the one of postgresdb.
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-test:5432/wotv
+      - SPRING_DATASOURCE_USERNAME=wotv_user
+      - SPRING_DATASOURCE_PASSWORD=wotv_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    volumes:
+      - .:/workspace
+      - maven-cache:/root/.m2
+    command: ["sh", "./mvnw", "--batch-mode", "--no-transfer-progress", "test"]
+
+  # Database of the tests: kept in memory, so every run starts from an empty schema as in the CI.
+  postgres-test:
+    profiles: ["tools"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: wotv
+      POSTGRES_USER: wotv_user
+      POSTGRES_PASSWORD: wotv_password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wotv_user -d wotv"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
 volumes:
   db:
+    driver: local
+  maven-cache:
     driver: local

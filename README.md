@@ -58,6 +58,15 @@ Inside a package, classes are named after their role: `Deck` (entity), `DeckRepo
 - The backend is available at [http://localhost:8080](http://localhost:8080/) (Swagger UI: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
 - Run `docker compose --profile app down` to stop the containers. Add `-v` to delete the database too, which is needed when `V1__init.sql` changes before the first release.
 
+### Without Java installed
+
+The `maven` service of `compose.yaml` holds JDK 25 and runs the Maven wrapper on the current sources, so only Docker is needed. Its tests use their own empty database (`postgres-test`, kept in memory), as in the CI, and never touch the data of `postgresdb`.
+
+- `docker compose run --rm maven` builds both modules and runs all the tests.
+- Any other Maven command works too, for example `docker compose run --rm maven ./mvnw -pl engine test` for the engine tests only, or `docker compose run --rm maven bash` for a shell with Java.
+- The first run downloads the dependencies into the `maven-cache` volume; the next ones reuse it.
+- Run `docker compose stop postgres-test` to stop the test database when you are done.
+
 ### Environment variables
 
 `APP_FRONTEND_URL` is the base URL of the React app and must include its `/play` path. It defaults to `http://localhost:5173/play`; in production, set it to `https://<domain>/play` so verification and password reset links open the correct routes.
