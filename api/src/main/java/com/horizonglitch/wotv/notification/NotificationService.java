@@ -3,6 +3,7 @@ package com.horizonglitch.wotv.notification;
 import com.horizonglitch.wotv.battle.Battle;
 import com.horizonglitch.wotv.player.Player;
 import com.horizonglitch.wotv.trade.Trade;
+import com.horizonglitch.wotv.social.Friendship;
 import org.springframework.stereotype.Service;
 
 /** Creates the notifications shown when the Summoner comes back. */
@@ -38,6 +39,15 @@ public class NotificationService {
 		notification.setPlayer(player);
 		notification.setType(type);
 		notification.setBattle(battle);
+		return notifications.save(notification);
+	}
+
+	/** A notification about a received or accepted friend request. */
+	public Notification notifyFriendship(Player player, NotificationType type, Friendship friendship) {
+		Notification notification = new Notification();
+		notification.setPlayer(player);
+		notification.setType(type);
+		notification.setFriendship(friendship);
 		return notifications.save(notification);
 	}
 }
