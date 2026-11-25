@@ -27,7 +27,7 @@ The engine is a library, not a separate service: it receives the two decks and a
 
 ### Packages of the `api` module
 
-The code under `com.horizonglitch.wotv` is organised by feature, not by layer: each package holds the entities, repositories, services, controllers and DTOs of one area, so a feature is read and changed in one place. Each package has a `package-info.java` that lists its tables and its API contract in [`api-contract-draft`](api-contract-draft).
+The code under `com.horizonglitch.wotv` is organised by feature, not by layer: each package holds the entities, repositories, services, controllers and DTOs of one area, so a feature is read and changed in one place.
 
 | Package | Area |
 | --- | --- |
