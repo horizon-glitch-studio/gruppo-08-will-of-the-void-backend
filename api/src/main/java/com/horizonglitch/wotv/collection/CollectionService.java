@@ -99,26 +99,26 @@ public class CollectionService {
 
 		if (days == null) {
 			collection.addPermanent(player.getId(), card.getId(), quantity, now);
-			return new Added(owned == null, null);
+			return new Added(owned == null, null, false);
 		}
 
 		Duration stay = Duration.ofDays((long) days * quantity);
 		if (owned != null && owned.getExpiresAt().isAfter(now)) {
 			owned.setExpiresAt(owned.getExpiresAt().plus(stay));
-			return new Added(false, owned.getExpiresAt());
+			return new Added(false, owned.getExpiresAt(), false);
 		}
 		if (owned != null) {
 			archiveStay(owned);
 			owned.setAcquiredAt(now);
 			owned.setExpiresAt(now.plus(stay));
-			return new Added(true, owned.getExpiresAt());
+			return new Added(true, owned.getExpiresAt(), true);
 		}
 		CollectionCard arrived = collection.save(newCard(player, card, 1, now, now.plus(stay)));
-		return new Added(true, arrived.getExpiresAt());
+		return new Added(true, arrived.getExpiresAt(), false);
 	}
 
 	/** {@code isNew} is true when the card was not on board before; {@code expiresAt} is null for permanent cards. */
-	public record Added(boolean isNew, Instant expiresAt) {
+	public record Added(boolean isNew, Instant expiresAt, boolean departed) {
 	}
 
 	private void archiveStay(CollectionCard ended) {

@@ -5,6 +5,9 @@ import com.horizonglitch.wotv.card.CatalogResponses;
 import com.horizonglitch.wotv.card.CatalogService;
 import com.horizonglitch.wotv.card.Rarity;
 import com.horizonglitch.wotv.collection.CollectionService;
+import com.horizonglitch.wotv.deck.DeckService;
+import com.horizonglitch.wotv.notification.NotificationService;
+import com.horizonglitch.wotv.notification.NotificationType;
 import com.horizonglitch.wotv.common.ApiException;
 import com.horizonglitch.wotv.common.PageResponse;
 import com.horizonglitch.wotv.common.Paging;
@@ -42,6 +45,8 @@ public class PackService {
 	private final PackGuaranteeRepository guarantees;
 	private final CatalogService catalog;
 	private final CollectionService collection;
+	private final DeckService decks;
+	private final NotificationService notifications;
 	private final ShardService shards;
 	private final PlayerService players;
 	private final AppProperties.Packs rules;
@@ -50,14 +55,16 @@ public class PackService {
 
 	public PackService(PackTypeRepository packTypes, EventPackCardRepository eventCards,
 			PackOpeningRepository openings, PackGuaranteeRepository guarantees, CatalogService catalog,
-			CollectionService collection, ShardService shards, PlayerService players, AppProperties properties,
-			RandomGenerator random, Clock clock) {
+			CollectionService collection, DeckService decks, NotificationService notifications, ShardService shards,
+			PlayerService players, AppProperties properties, RandomGenerator random, Clock clock) {
 		this.packTypes = packTypes;
 		this.eventCards = eventCards;
 		this.openings = openings;
 		this.guarantees = guarantees;
 		this.catalog = catalog;
 		this.collection = collection;
+		this.decks = decks;
+		this.notifications = notifications;
 		this.shards = shards;
 		this.players = players;
 		this.rules = properties.packs();
@@ -119,6 +126,12 @@ public class PackService {
 			drawn.setQuantity(entry.getValue());
 			opening.getCards().add(drawn);
 			CollectionService.Added added = collection.addFromPack(player, card, entry.getValue());
+			if (added.departed()) {
+				notifications.notifyCard(player, NotificationType.WANDERER_DEPARTED, card);
+				if (decks.recheckAll(player)) {
+					notifications.notify(player, NotificationType.DECK_INVALID);
+				}
+			}
 			opened.add(new PackResponses.OpenedCard(CatalogResponses.CardView.of(card), entry.getValue(),
 					added.expiresAt(), added.isNew()));
 		}
