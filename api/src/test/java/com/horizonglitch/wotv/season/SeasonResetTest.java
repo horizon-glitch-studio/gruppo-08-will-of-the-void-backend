@@ -10,6 +10,24 @@ class SeasonResetTest {
 	private static final int THRESHOLD = 1000;
 
 	@Test
+	void orbitNamesAndTrophyRangesComeFromTheRule() {
+		assertThat(Orbit.ORBIT_1.englishName()).isEqualTo("Brink Orbit");
+		assertThat(Orbit.ORBIT_1.italianName()).isEqualTo("Orbita del Bordo");
+		assertThat(Orbit.fromTrophies(199)).isEqualTo(Orbit.ORBIT_1);
+		assertThat(Orbit.ORBIT_2.englishName()).isEqualTo("Drift Orbit");
+		assertThat(Orbit.ORBIT_2.italianName()).isEqualTo("Orbita della Deriva");
+		assertThat(Orbit.fromTrophies(200)).isEqualTo(Orbit.ORBIT_2);
+		assertThat(Orbit.fromTrophies(499)).isEqualTo(Orbit.ORBIT_2);
+		assertThat(Orbit.ORBIT_3.englishName()).isEqualTo("Halo Orbit");
+		assertThat(Orbit.ORBIT_3.italianName()).isEqualTo("Orbita dell'Alone");
+		assertThat(Orbit.fromTrophies(500)).isEqualTo(Orbit.ORBIT_3);
+		assertThat(Orbit.fromTrophies(999)).isEqualTo(Orbit.ORBIT_3);
+		assertThat(Orbit.ORBIT_4.englishName()).isEqualTo("Zenith Orbit");
+		assertThat(Orbit.ORBIT_4.italianName()).isEqualTo("Orbita dello Zenit");
+		assertThat(Orbit.fromTrophies(1000)).isEqualTo(Orbit.ORBIT_4);
+	}
+
+	@Test
 	void trophiesAboveTheThresholdAreHalved() {
 		assertThat(SeasonService.trophiesAfterReset(1200, THRESHOLD)).isEqualTo(1100);
 		assertThat(SeasonService.trophiesAfterReset(2000, THRESHOLD)).isEqualTo(1500);

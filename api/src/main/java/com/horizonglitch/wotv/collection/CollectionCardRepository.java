@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import java.time.Instant;
 
 public interface CollectionCardRepository
 		extends JpaRepository<CollectionCard, CollectionCardId>, JpaSpecificationExecutor<CollectionCard> {
@@ -57,4 +60,11 @@ public interface CollectionCardRepository
 	@Query(value = "SELECT COALESCE(SUM(quantity), 0) FROM collection_card WHERE player_id = :playerId "
 			+ "AND expires_at IS NULL", nativeQuery = true)
 	int countPermanent(@Param("playerId") Long playerId);
+
+	@Query("select c from CollectionCard c where c.expiresAt is not null and c.expiresAt <= :now")
+	List<CollectionCard> findExpired(@Param("now") Instant now);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select c from CollectionCard c where c.id = :id")
+	Optional<CollectionCard> lockById(@Param("id") CollectionCardId id);
 }

@@ -313,7 +313,11 @@ Request:
 Field notes:
 
 - `avatar`: key for a preset avatar (image uploads are not supported), stored as `player.avatar_id`.
-- `league`: calculated from trophies, not stored. Thresholds: 0–199, 200–499, 500–999, 1000 and more; names are `[TBD]`.
+- `league`: calculated from trophies, not stored. Stable code and player-facing name:
+  - `ORBIT_1` — Brink Orbit / Orbita del Bordo — 0–199 trophies.
+  - `ORBIT_2` — Drift Orbit / Orbita della Deriva — 200–499 trophies.
+  - `ORBIT_3` — Halo Orbit / Orbita dell'Alone — 500–999 trophies.
+  - `ORBIT_4` — Zenith Orbit / Orbita dello Zenit — 1000+ trophies.
 - `defenseDeckId`: `null` if the player has no defensive deck. The frontend must also check whether the deck is valid (see the deck contract).
 - `protectedUntil`: `null` if the player is not protected.
 - `stats`: derived from the `battle` table (only matches with status `PLAYED`). `winRate` = `wins / matchesPlayed * 100`, rounded to one decimal place, or `0` if the player has not played. Draws count as matches played, not wins.
