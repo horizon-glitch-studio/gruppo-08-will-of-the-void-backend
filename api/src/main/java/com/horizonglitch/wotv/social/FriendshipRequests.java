@@ -1,12 +1,10 @@
 package com.horizonglitch.wotv.social;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public final class FriendshipRequests {
+	private FriendshipRequests() {}
 
-	private FriendshipRequests() {
-	}
-
-	public record Send(@NotBlank(message = "FIELD_REQUIRED") String username) {
-	}
+	public record Create(@NotBlank @Size(max = 50) String username) {}
 }

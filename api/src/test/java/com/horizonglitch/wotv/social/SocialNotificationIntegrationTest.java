@@ -60,15 +60,15 @@ class SocialNotificationIntegrationTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"username\":\"" + bob.name + "\"}"))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.status").value("PENDING"))
+				.andExpect(jsonPath("$.direction").value("outgoing"))
 				.andReturn().getResponse().getContentAsString();
-		long friendshipId = ((Number) JsonPath.read(sent, "$.id")).longValue();
+		long friendshipId = ((Number) JsonPath.read(sent, "$.friendshipId")).longValue();
 
 		assertThat(notificationCount(bob.id, "FRIEND_REQUEST_RECEIVED")).isEqualTo(1);
 		mvc.perform(post("/api/v1/friend-requests/" + friendshipId + "/accept")
 				.header("Authorization", "Bearer " + bob.token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("ACCEPTED"));
+				.andExpect(jsonPath("$.username").value(alice.name));
 		assertThat(notificationCount(alice.id, "FRIEND_REQUEST_ACCEPTED")).isEqualTo(1);
 
 		String rejected = mvc.perform(post("/api/v1/friend-requests")
@@ -76,7 +76,7 @@ class SocialNotificationIntegrationTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"username\":\"" + carol.name + "\"}"))
 				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-		long rejectedId = ((Number) JsonPath.read(rejected, "$.id")).longValue();
+		long rejectedId = ((Number) JsonPath.read(rejected, "$.friendshipId")).longValue();
 		mvc.perform(post("/api/v1/friend-requests/" + rejectedId + "/reject")
 				.header("Authorization", "Bearer " + carol.token))
 				.andExpect(status().isNoContent());

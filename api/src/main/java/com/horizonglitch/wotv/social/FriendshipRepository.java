@@ -3,8 +3,10 @@ package com.horizonglitch.wotv.social;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import java.util.Optional;
 
 public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
@@ -18,41 +20,27 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
 	boolean areFriends(@Param("a") Long a, @Param("b") Long b);
 
 	@Query("""
-			select f from Friendship f
-			where (f.requester.id = :a and f.addressee.id = :b)
-			   or (f.requester.id = :b and f.addressee.id = :a)
+			select f from Friendship f where f.status = com.horizonglitch.wotv.social.FriendshipStatus.ACCEPTED
+			and (f.requester.id = :playerId or f.addressee.id = :playerId)
 			""")
-	Optional<Friendship> findBetween(@Param("a") Long a, @Param("b") Long b);
+	Page<Friendship> findAccepted(@Param("playerId") long playerId, Pageable pageable);
 
 	@Query("""
-			select count(f) from Friendship f
-			where f.status = com.horizonglitch.wotv.social.FriendshipStatus.ACCEPTED
-			  and (f.requester.id = :playerId or f.addressee.id = :playerId)
+			select f from Friendship f where f.status = com.horizonglitch.wotv.social.FriendshipStatus.PENDING
+			and ((:direction = 'incoming' and f.addressee.id = :playerId)
+			or (:direction = 'outgoing' and f.requester.id = :playerId))
 			""")
-	long countFriends(@Param("playerId") Long playerId);
+	Page<Friendship> findPending(@Param("playerId") long playerId, @Param("direction") String direction, Pageable pageable);
 
-	@Query("""
-			select count(f) from Friendship f
-			where f.status = com.horizonglitch.wotv.social.FriendshipStatus.PENDING
-			  and f.requester.id = :playerId
-			""")
-	long countPendingSent(@Param("playerId") Long playerId);
+	@Query("select count(f) from Friendship f where f.status = com.horizonglitch.wotv.social.FriendshipStatus.ACCEPTED and (f.requester.id = :id or f.addressee.id = :id)")
+	long countFriends(@Param("id") long playerId);
 
-	@Query("""
-			select f from Friendship f
-			where f.status = com.horizonglitch.wotv.social.FriendshipStatus.ACCEPTED
-			  and (f.requester.id = :playerId or f.addressee.id = :playerId)
-			""")
-	Page<Friendship> findFriends(@Param("playerId") Long playerId, Pageable pageable);
+	long countByRequester_IdAndStatus(long requesterId, FriendshipStatus status);
 
-	@Query("""
-			select f from Friendship f
-			where f.status = com.horizonglitch.wotv.social.FriendshipStatus.PENDING
-			  and (:direction is null
-			       or (:direction = 'received' and f.addressee.id = :playerId)
-			       or (:direction = 'sent' and f.requester.id = :playerId))
-			  and (f.requester.id = :playerId or f.addressee.id = :playerId)
-			""")
-	Page<Friendship> findRequests(@Param("playerId") Long playerId,
-			@Param("direction") String direction, Pageable pageable);
+	@Query("select f from Friendship f where f.id = :id")
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	Optional<Friendship> lockById(@Param("id") long id);
+
+	@Query("select count(f) > 0 from Friendship f where (f.requester.id = :a and f.addressee.id = :b) or (f.requester.id = :b and f.addressee.id = :a)")
+	boolean existsBetween(@Param("a") long a, @Param("b") long b);
 }

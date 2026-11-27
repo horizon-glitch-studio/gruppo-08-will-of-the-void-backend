@@ -39,6 +39,11 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
 	@Query("select p from Player p where p.id = :id and p.deletedAt is null")
 	Optional<Player> lockById(@Param("id") Long id);
 
+	/** Locks active players in id order so concurrent friendship acceptances cannot exceed either player's limit. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select p from Player p where p.id in :ids and p.deletedAt is null order by p.id")
+	List<Player> lockActiveByIds(@Param("ids") List<Long> ids);
+
 	/** Records authenticated activity at most once per hour without loading or locking the player entity. */
 	@Modifying
 	@Query(value = "UPDATE player SET comeback_eligible = comeback_eligible OR "
